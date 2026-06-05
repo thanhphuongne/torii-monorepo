@@ -1,0 +1,206 @@
+syntax = "proto3";
+package wajlc;
+
+import "wajlc_datamessage.proto";
+import "wajlc_nats_msg.proto";
+
+message CommonResponse {
+  bool status = 1;
+  string msg = 2;
+}
+
+message VerifyTokenReq {
+  optional bool is_production = 1;
+}
+
+message VerifyTokenRes {
+  bool status = 1;
+  string msg = 2;
+  repeated string nats_ws_urls = 3;
+  optional string server_version = 4;
+  optional string room_id = 5;
+  optional string user_id = 6;
+  optional string room_stream_name = 7;
+  optional NatsSubjects nats_subjects = 8;
+  optional bool enabled_self_insert_encryption_key = 9;
+  optional bool is_cloud = 10;
+}
+
+message MuteUnMuteTrackReq {
+  string sid = 1;
+  string room_id = 2;
+  string user_id = 3;
+  string track_sid = 4;
+  bool muted = 5;
+  string requested_user_id = 6;
+}
+
+message RemoveParticipantReq {
+  string sid = 1;
+  string room_id = 2;
+  string user_id = 3;
+  string msg = 4;
+  bool block_user = 5;
+}
+
+message DataMessageReq {
+  string room_id = 1;
+  string room_sid = 2;
+  string user_id = 3;
+  string user_sid = 4;
+  DataMsgBodyType msg_body_type = 5;
+  string msg = 6;
+  string requested_user_id = 7;
+  repeated string send_to = 8;
+  bool is_admin = 9;
+}
+
+message RoomEndAPIReq {
+  string room_id = 1;
+}
+
+message ChangeVisibilityRes {
+  string room_id = 1;
+  optional bool visible_notepad = 2;
+  optional bool visible_white_board = 3;
+}
+
+enum SwitchPresenterTask {
+  PROMOTE = 0;
+  DEMOTE = 1;
+}
+
+message SwitchPresenterReq {
+  SwitchPresenterTask task = 1;
+  string user_id = 2;
+  string room_id = 3;
+  string requested_user_id = 4;
+}
+
+enum ExternalMediaPlayerTask {
+  START_PLAYBACK = 0;
+  END_PLAYBACK = 1;
+}
+
+message ExternalMediaPlayerReq {
+  ExternalMediaPlayerTask task = 1;
+  optional string url = 2;
+  optional double seek_to = 3;
+  string room_id = 4;
+  string user_id = 5;
+}
+
+enum ExternalDisplayLinkTask {
+  START_EXTERNAL_LINK = 0;
+  STOP_EXTERNAL_LINK = 1;
+}
+
+message ExternalDisplayLinkReq {
+  ExternalDisplayLinkTask task = 1;
+  optional string url = 2;
+  string room_id = 4;
+  string user_id = 5;
+}
+
+message CreateEtherpadSessionRes {
+  bool status = 1;
+  string msg = 2;
+  optional string pad_id = 3;
+  optional string readonly_pad_id = 4;
+}
+
+message CleanEtherpadReq {
+  string room_id = 1;
+  string node_id = 2;
+  string pad_id = 3;
+}
+
+message ChangeEtherpadStatusReq {
+  string room_id = 1;
+  bool is_active = 2;
+}
+
+message ApproveWaitingUsersReq {
+  string room_id = 1;
+  string user_id = 2;
+}
+
+message UpdateWaitingRoomMessageReq {
+  string room_id = 1;
+  string msg = 2;
+}
+
+message UpdateUserLockSettingsReq {
+  string room_sid = 1;
+  string room_id = 2;
+  string user_id = 3;
+  string service = 4;
+  string direction = 5;
+  string requested_user_id = 6;
+}
+
+enum RoomUploadedFileType {
+  CHAT_FILE = 0;
+  WHITEBOARD_IMAGE_FILE = 1;
+  WHITEBOARD_CONVERTED_FILE = 2;
+  EXTERNAL_MEDIA_PLAYER_FILE = 3;
+  VIRTUAL_BACKGROUND = 4;
+}
+
+message UploadBase64EncodedDataReq {
+  string room_id = 1;
+  string data = 3;
+  string file_name = 4;
+  RoomUploadedFileType file_type = 5;
+}
+
+message UploadBase64EncodedDataRes {
+  bool status = 1;
+  string msg = 2;
+  string file_path = 3;
+  string file_name = 4;
+  string file_extension = 5;
+  string file_mime_type =  6;
+}
+
+message UploadedFileMergeReq {
+  string room_sid = 1;
+  string room_id = 2;
+  RoomUploadedFileType file_type = 3;
+  string resumable_identifier = 4;
+  string resumable_filename = 5;
+  int32 resumable_total_chunks = 6;
+}
+
+message UploadedFileRes {
+  bool status = 1;
+  string msg = 2;
+  string file_id = 3;
+  string file_path = 4;
+  string file_name = 5;
+  string file_extension = 6;
+  string file_mime_type = 7;
+  RoomUploadedFileType file_type = 8;
+}
+
+message RoomUploadedFileMetadata {
+  string file_id = 1;
+  string file_name = 2;
+  string file_path = 3;
+  string mime_type = 4;
+  string uploaded_by_user_id = 5;
+  string uploaded_by_name = 6;
+  RoomUploadedFileType file_type = 7;
+  optional int32 total_pages = 8;
+}
+
+message GetRoomUploadedFilesReq {
+  string room_id = 1;
+  RoomUploadedFileType file_type = 2;
+}
+
+message GetRoomUploadedFilesRes {
+  bool status = 1;
+  string msg = 2;
+  repeated RoomUploadedFileMetadata files = 3;
+}

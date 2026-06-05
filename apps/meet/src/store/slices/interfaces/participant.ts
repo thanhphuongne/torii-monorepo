@@ -1,0 +1,28 @@
+import { ConnectionQuality } from 'livekit-client';
+import { ICurrentUserMetadata } from '@/store/slices/interfaces/session';
+
+export interface IParticipant {
+  sid: string;
+  userId: string;
+  name: string;
+  metadata: ICurrentUserMetadata;
+  audioTracks: number;
+  audioVolume?: number;
+  videoTracks: number;
+  screenShareTrack: number;
+  isMuted: boolean;
+  connectionQuality: ConnectionQuality;
+  isLocal: boolean;
+  joinedAt: number;
+  visibility: string;
+  pinWebcam?: boolean;
+  isOnline: boolean;
+}
+
+export interface IVisibleParticipantInfo {
+  userId: string;
+  name: string;
+  isAdmin: boolean;
+  waitForApproval: boolean;
+  profilePic?: string;
+}

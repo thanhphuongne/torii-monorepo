@@ -1,0 +1,214 @@
+services:
+  # ========================================
+  # Infrastructure Services
+  # ========================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: torii-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456789
+      POSTGRES_DB: wajlc
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: torii-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+
+  nats:
+    image: nats:2.12-alpine
+    container_name: torii-nats
+    restart: always
+    command:
+      - "-config"
+      - "/nats-server.conf"
+    ports:
+      - "4222:4222/tcp" # clients
+      - "8222:8222/tcp" # websockets
+    volumes:
+      - ./nats_server.conf:/nats-server.conf
+      - natsdata:/data/jetstream
+
+  livekit:
+    image: livekit/livekit-server:v1.9.11
+    container_name: torii-livekit
+    restart: always
+    network_mode: "host"
+    command: --config /livekit.yaml --node-ip ${VPS_PUBLIC_IP:-34.101.174.98}
+    volumes:
+      - ./livekit.yaml:/livekit.yaml
+      - livekitdata:/data
+      - ./certs:/certs:ro
+    depends_on:
+      - redis
+
+  livekit-ingress:
+    image: livekit/ingress:v1.4.3
+    container_name: torii-livekit-ingress
+    restart: always
+    network_mode: "host"
+    command: --config /ingress.yaml
+    volumes:
+      - ./ingress.yaml:/ingress.yaml
+    depends_on:
+      - redis
+      - livekit
+
+  # ========================================
+  # Application Services
+  # ========================================
+  # NOTE: Using pre-built image from Docker Hub to save VPS disk space
+  # Image name is configured via DOCKER_USERNAME in .env
+
+  # Uploads: meet service ghi file; gateway phục vụ GET /download/uploadedFile/...
+  # Bắt buộc cùng volume — nếu không, user khác không fetch được ảnh whiteboard (chỉ người upload thấy).
+  gateway:
+    image: ${DOCKER_USERNAME}/torii-backend:latest
+    command: npm run prod:gateway
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NATS_URL=${NATS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./apps/server/config/config.yaml:/app/apps/server/config/config.yaml
+      - uploads_data:/app/apps/server/uploads
+    depends_on:
+      - nats
+      - postgres
+      - redis
+      - identity
+      - meet
+      - academy
+
+  identity:
+    image: ${DOCKER_USERNAME}/torii-backend:latest
+    command: npm run prod:identity
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NATS_URL=${NATS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    volumes:
+      - ./apps/server/config/config.yaml:/app/apps/server/config/config.yaml
+    depends_on:
+      - nats
+      - postgres
+      - redis
+
+  academy:
+    image: ${DOCKER_USERNAME}/torii-backend:latest
+    command: npm run prod:academy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NATS_URL=${NATS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    volumes:
+      - ./apps/server/config/config.yaml:/app/apps/server/config/config.yaml
+    depends_on:
+      - nats
+      - postgres
+      - redis
+
+  meet:
+    image: ${DOCKER_USERNAME}/torii-backend:latest
+    command: npm run prod:meet
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NATS_URL=${NATS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    volumes:
+      - ./apps/server/config/config.yaml:/app/apps/server/config/config.yaml
+      - uploads_data:/app/apps/server/uploads
+      - ./storage/trash:/app/trash # Mount trash for janitor
+      - ./recording_files/del_backup:/app/recording_backup
+    depends_on:
+      - nats
+      - postgres
+      - redis
+      - livekit
+
+  agents:
+    image: ${DOCKER_USERNAME}/torii-backend:latest
+    command: npm run prod:agents
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NATS_URL=${NATS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_HOST=${REDIS_HOST}
+    volumes:
+      - ./apps/server/config/config.yaml:/app/apps/server/config/config.yaml
+      - ./apps/server/services/agents/src/assets:/app/apps/server/services/agents/src/assets # Mount prompts
+    depends_on:
+      - nats
+      - redis
+
+  voice-agent:
+    build:
+      context: .
+      dockerfile: apps/voice-agent/Dockerfile
+    image: ${DOCKER_USERNAME}/torii-voice-agent:latest
+    restart: always
+    network_mode: "host"
+    env_file:
+      - ./apps/voice-agent/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=${VOICE_AGENT_PORT:-8082}
+    depends_on:
+      - livekit
+
+volumes:
+  pgdata:
+  redisdata:
+  natsdata:
+  livekitdata:
+  # Dùng chung giữa gateway + meet (uploadPath ./uploads → /app/apps/server/uploads)
+  uploads_data:
+
+
+networks:
+  # Separate network for voice-agent with MTU 1400 to fix GCP connectivity.
+  # Does NOT affect default network used by LiveKit Meet and other services.
+  voice-agent-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1400

@@ -1,0 +1,30 @@
+{
+    "name": "@workspace/protocol",
+    "version": "0.0.1",
+    "type": "commonjs",
+    "main": "dist/index.js",
+    "module": "dist/esm/index.js",
+    "exports": {
+        ".": {
+            "require": "./dist/index.js",
+            "import": "./dist/esm/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc && tsc -p tsconfig.esm.json && node -e \"require('fs').writeFileSync('dist/esm/package.json', '{\\\"type\\\": \\\"module\\\"}')\"",
+        "generate": "pnpm exec buf generate",
+        "clean": "rimraf src/gen"
+    },
+    "dependencies": {
+        "@bufbuild/protobuf": "^2.10.1",
+        "rxjs": "^7.8.1"
+    },
+    "devDependencies": {
+        "@bufbuild/buf": "^1.61.0",
+        "@bufbuild/protoc-gen-es": "^2.10.1",
+        "rimraf": "^5.0.5",
+        "typescript": "^5.0.0"
+    }
+}

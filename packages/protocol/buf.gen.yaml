@@ -1,0 +1,13 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - field_option: jstype
+      value: JS_STRING
+plugins:
+  - local: protoc-gen-es
+    out: src/gen
+    opt:
+     - target=ts
+inputs:
+  - directory: proto

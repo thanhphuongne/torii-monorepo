@@ -1,0 +1,63 @@
+import React from 'react';
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
+import { AnimatePresence, motion } from 'framer-motion';
+import clsx from 'clsx';
+
+export interface ITabItem {
+    id: string | number;
+    title: string;
+    content: React.ReactNode;
+}
+
+interface ITabsProps {
+    items: ITabItem[];
+    vertical?: boolean;
+    tabListCss?: string;
+    tabPanelsCss?: string;
+}
+
+const Tabs = ({
+                  items,
+                  vertical = false,
+                  tabListCss,
+                  tabPanelsCss,
+              }: ITabsProps) => {
+    return (
+        <TabGroup vertical={vertical} className="outline-hidden">
+            <TabList className={clsx('tablist relative flex', tabListCss)}>
+                {items.map((item) => (
+                    <Tab
+                        key={item.id}
+                        className={({ selected }) => {
+                            return clsx(
+                                'w-full py-2 text-sm text-foreground font-medium leading-5 border-b-2 border-solid transition ease-in outline-hidden cursor-pointer',
+                                selected ? 'border-primary' : 'border-transparent hover:border-muted',
+                            );
+                        }}
+                    >
+                        <div className="name relative inline-block">{item.title}</div>
+                    </Tab>
+                ))}
+            </TabList>
+            <TabPanels className={clsx('relative', tabPanelsCss)}>
+                <AnimatePresence mode="wait">
+                    {items.map((item) => (
+                        <TabPanel
+                            key={item.id}
+                            as={motion.div}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="pt-2 xl:pt-5 outline-hidden"
+                        >
+                            {item.content}
+                        </TabPanel>
+                    ))}
+                </AnimatePresence>
+            </TabPanels>
+        </TabGroup>
+    );
+};
+
+export default Tabs;

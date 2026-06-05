@@ -1,0 +1,33 @@
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  stun_servers:
+    - stun.l.google.com:19302
+redis:
+  address: redis:6379
+  username: ""
+  password: ""
+  db: 0
+room:
+  enable_remote_unmute: true
+  enabled_codecs:
+    - mime: audio/opus
+    - mime: audio/red
+    - mime: video/vp8
+    - mime: video/vp9
+    - mime: video/av1
+    - mime: video/h264
+logging:
+  # log level, valid values: debug, info, warn, error
+  level: info
+  sample: false
+keys:
+  APIiYAA5w37Cfo2: 6aNur7qqupeZhFYNOJVUyeXxXhVw8f4lm13pEDUx8SgB
+webhook:
+  api_key: APIiYAA5w37Cfo2
+  urls:
+#   - "http://gateway:8080/webhook"
+    - "http://host.docker.internal:8080/webhook"
+ingress:
+  rtmp_base_url: rtmp://localhost/live
+  whip_base_url: http://localhost:8089/whip

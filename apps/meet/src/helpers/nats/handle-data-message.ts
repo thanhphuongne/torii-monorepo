@@ -1,0 +1,248 @@
+import {
+  ChatMessage,
+  DataChannelMessage,
+  DataMsgBodyType,
+  InsightsTranscriptionResultSchema,
+} from '@workspace/protocol';
+import { ConnectionQuality } from 'livekit-client';
+
+import ConnectNats from '@/helpers/nats/connect-nats';
+import { store } from '@/store';
+import {
+  addWhiteboardDataSentFromDonor,
+  updateRequestedWhiteboardData,
+} from '@/store/slices/whiteboard';
+import { pollsApi } from '@/store/services/polls-api';
+import { updateParticipant } from '@/store/slices/participant-slice';
+import { addExternalMediaPlayerEvent } from '@/store/slices/external-media-player';
+import { addUserNotification } from '@/store/slices/roomSettingsSlice';
+import { updateReceivedInvitationFor } from '@/store/slices/breakout-room-slice';
+import { WhiteboardDataAsDonorData } from '@/store/slices/interfaces/whiteboard';
+import { fromJsonString } from '@bufbuild/protobuf';
+import { TextWithInfo } from '@/store/slices/interfaces/speech-services';
+import { addSpeechSubtitleText } from '@/store/slices/speech-services-slice';
+import {
+  addAllChatMessages,
+  selectPublicChatMessages,
+} from '@/store/slices/chat-messages-slice';
+
+export default class HandleDataMessage {
+  private connectNats: ConnectNats;
+
+  constructor(connectNats: ConnectNats) {
+    this.connectNats = connectNats;
+  }
+
+  public handleMessage = async (payload: DataChannelMessage) => {
+    switch (payload.type) {
+      case DataMsgBodyType.REQ_FULL_WHITEBOARD_DATA:
+        if (payload.toUserId === this.connectNats.userId) {
+          // only if was sent for me
+          this.handleSendInitWhiteboard(payload);
+        }
+        break;
+      case DataMsgBodyType.RES_FULL_WHITEBOARD_DATA:
+        if (payload.toUserId === this.connectNats.userId) {
+          // only if was sent for me
+          this.handleWhiteboardDataSentFromDonor(payload.message);
+        }
+        break;
+      case DataMsgBodyType.REQ_PUBLIC_CHAT_DATA:
+        if (payload.toUserId === this.connectNats.userId) {
+          // only if was sent for me
+          this.handlePublicChatDataReq(payload.fromUserId);
+        }
+        break;
+      case DataMsgBodyType.RES_PUBLIC_CHAT_DATA:
+        if (payload.toUserId === this.connectNats.userId) {
+          // only if was sent for me
+          this.handlePublicChatDataRes(payload.message);
+        }
+        break;
+      case DataMsgBodyType.USER_VISIBILITY_CHANGE:
+        if (payload.fromUserId === this.connectNats.userId) {
+          return;
+        }
+        this.handleUserVisibility(payload);
+        break;
+      case DataMsgBodyType.INFO:
+        if (
+          payload.fromUserId === this.connectNats.userId ||
+          this.connectNats.isRecorder
+        ) {
+          return;
+        }
+        store.dispatch(
+          addUserNotification({
+            message: payload.message,
+            typeOption: 'info',
+          }),
+        );
+        break;
+      case DataMsgBodyType.ALERT:
+        if (
+          payload.fromUserId === this.connectNats.userId ||
+          this.connectNats.isRecorder
+        ) {
+          return;
+        }
+        store.dispatch(
+          addUserNotification({
+            message: payload.message,
+            typeOption: 'warning',
+          }),
+        );
+        break;
+      case DataMsgBodyType.EXTERNAL_MEDIA_PLAYER_EVENTS:
+        if (payload.fromUserId === this.connectNats.userId) {
+          return;
+        }
+        this.handleExternalMediaPlayerEvents(payload.message);
+        break;
+      case DataMsgBodyType.NEW_POLL_RESPONSE:
+        if (payload.fromUserId === this.connectNats.userId) {
+          return;
+        }
+        store.dispatch(
+          pollsApi.util.invalidateTags([
+            {
+              type: 'Count',
+              id: payload.message,
+            },
+            {
+              type: 'Selected',
+              id: payload.message,
+            },
+            {
+              type: 'PollDetails',
+              id: payload.message,
+            },
+          ]),
+        );
+        break;
+      case DataMsgBodyType.USER_CONNECTION_QUALITY_CHANGE:
+        store.dispatch(
+          updateParticipant({
+            id: payload.fromUserId,
+            changes: {
+              connectionQuality: payload.message as ConnectionQuality,
+            },
+          }),
+        );
+        break;
+      case DataMsgBodyType.PUSH_JOIN_BREAKOUT_ROOM:
+        if (payload.toUserId === this.connectNats.userId) {
+          store.dispatch(updateReceivedInvitationFor(payload.message));
+        }
+        break;
+    }
+  };
+
+  private handleSendInitWhiteboard(payload: DataChannelMessage) {
+    if (store.getState().whiteboard.requestedWhiteboardData.requested) {
+      // already have one request
+      return;
+    }
+    // we'll update the reducer-only
+    // component will take care for sending data
+    store.dispatch(
+      updateRequestedWhiteboardData({
+        requested: true,
+        sendTo: payload.fromUserId,
+      }),
+    );
+  }
+
+  private handleUserVisibility(payload: DataChannelMessage) {
+    if (!this.connectNats.isAdmin) {
+      return;
+    }
+    store.dispatch(
+      updateParticipant({
+        id: payload.fromUserId,
+        changes: {
+          visibility: payload.message,
+        },
+      }),
+    );
+  }
+
+  private handleExternalMediaPlayerEvents(msg: string) {
+    if (msg === '') {
+      return;
+    }
+    const data = JSON.parse(msg);
+    store.dispatch(addExternalMediaPlayerEvent(data));
+  }
+
+  public handleSpeechSubtitleText(message: string) {
+    if (message === '') {
+      return;
+    }
+    const lang = store.getState().speechServices.selectedSubtitleLang;
+    const data = fromJsonString(InsightsTranscriptionResultSchema, message);
+
+    if (lang !== '') {
+      const d = new Date();
+      const type = data.isPartial ? 'interim' : 'final';
+      const result: TextWithInfo = {
+        text: '',
+        from: data.fromUserName,
+        time: d.toLocaleTimeString(),
+        id: d.getUTCMilliseconds().toString(),
+      };
+      if (data.lang === lang) {
+        result.text = data.text;
+      } else if (typeof data.translations[lang] !== 'undefined') {
+        result.text = data.translations[lang];
+      } else {
+        return;
+      }
+
+      store.dispatch(
+        addSpeechSubtitleText({
+          type,
+          result,
+        }),
+      );
+    }
+  }
+
+  private handleWhiteboardDataSentFromDonor(msg: string) {
+    try {
+      const data: WhiteboardDataAsDonorData = JSON.parse(msg);
+      store.dispatch(addWhiteboardDataSentFromDonor(data));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  private handlePublicChatDataReq(fromUserId: string) {
+    const publicChats = selectPublicChatMessages(store.getState()).filter(
+      (msg) => msg.fromUserId !== 'system',
+    );
+    if (publicChats.length) {
+      this.connectNats
+        .sendDataMessage(
+          DataMsgBodyType.RES_PUBLIC_CHAT_DATA,
+          JSON.stringify(publicChats),
+          fromUserId,
+        )
+        .then();
+    }
+  }
+
+  private handlePublicChatDataRes(msg: string) {
+    try {
+      const data: ChatMessage[] = JSON.parse(msg);
+      store.dispatch(
+        addAllChatMessages({
+          messages: data,
+          currentUserId: this.connectNats.userId,
+        }),
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  }
+}

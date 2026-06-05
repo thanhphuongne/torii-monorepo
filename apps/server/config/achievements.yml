@@ -1,0 +1,145 @@
+# Achievement Seed Data
+# Auto-seeded when running: prisma db push, prisma migrate, or prisma db seed
+
+achievements:
+  # ========================================
+  # STREAK ACHIEVEMENTS
+  # ========================================
+  - code: STREAK_3
+    category: STREAK
+    title: 3-Day Streak 🔥
+    description: Keep your learning streak alive for 3 days in a row
+    icon: 🔥
+    requirements:
+      streak: 3
+    rewards:
+      freezeCount: 1
+    orderIndex: 1
+
+  - code: STREAK_7
+    category: STREAK
+    title: 7-Day Streak 🌟
+    description: Maintain a 7-day learning streak
+    icon: 🌟
+    requirements:
+      streak: 7
+    rewards:
+      freezeCount: 2
+    orderIndex: 2
+
+  - code: STREAK_14
+    category: STREAK
+    title: 14-Day Streak 💎
+    description: Two weeks of consistent learning!
+    icon: 💎
+    requirements:
+      streak: 14
+    rewards:
+      freezeCount: 3
+    orderIndex: 3
+
+  - code: STREAK_30
+    category: STREAK
+    title: 30-Day Streak 👑
+    description: One month of dedication!
+    icon: 👑
+    requirements:
+      streak: 30
+    rewards:
+      freezeCount: 5
+    orderIndex: 4
+
+  - code: STREAK_100
+    category: STREAK
+    title: 100-Day Streak 🏆
+    description: Legendary commitment to learning
+    icon: 🏆
+    requirements:
+      streak: 100
+    rewards:
+      freezeCount: 10
+    orderIndex: 5
+
+  # ========================================
+  # CONSISTENCY ACHIEVEMENTS
+  # ========================================
+  - code: WEEK_WARRIOR
+    category: CONSISTENCY
+    title: Week Warrior ⚔️
+    description: Active 5 out of 7 days in a week
+    icon: ⚔️
+    requirements:
+      weeklyActiveDays: 5
+    rewards:
+      freezeCount: 1
+    orderIndex: 10
+
+  - code: MONTHLY_HERO
+    category: CONSISTENCY
+    title: Monthly Hero 🦸
+    description: Active 20 or more days in a month
+    icon: 🦸
+    requirements:
+      monthlyActiveDays: 20
+    rewards:
+      freezeCount: 3
+    orderIndex: 11
+
+  # ========================================
+  # LEARNING PROGRESS ACHIEVEMENTS
+  # ========================================
+  - code: FIRST_LESSON
+    category: LEARNING_PROGRESS
+    title: First Steps 🐣
+    description: Complete your first lesson
+    icon: 🐣
+    requirements:
+      lessonsCompleted: 1
+    rewards: {}
+    orderIndex: 20
+
+  - code: QUIZ_MASTER
+    category: LEARNING_PROGRESS
+    title: Quiz Master 📚
+    description: Answer 100 quiz questions
+    icon: 📚
+    requirements:
+      quizAnswers: 100
+    rewards:
+      freezeCount: 2
+    orderIndex: 21
+
+  - code: REVIEWER
+    category: LEARNING_PROGRESS
+    title: Dedicated Reviewer 🔁
+    description: Review 30 lessons or flashcards
+    icon: 🔁
+    requirements:
+      reviewsCompleted: 30
+    rewards:
+      freezeCount: 1
+    orderIndex: 22
+
+  # ========================================
+  # RECOVERY ACHIEVEMENTS
+  # ========================================
+  - code: COMEBACK
+    category: RECOVERY
+    title: Comeback Champion 💪
+    description: Return after being away for 7+ days
+    icon: 💪
+    requirements:
+      returnAfterDays: 7
+    rewards:
+      freezeCount: 1
+    orderIndex: 30
+
+  - code: SECOND_CHANCE
+    category: RECOVERY
+    title: Second Chance 🛡️
+    description: Successfully use a streak freeze
+    icon: 🛡️
+    requirements:
+      freezeUsed: true
+    rewards: {}
+    orderIndex: 31

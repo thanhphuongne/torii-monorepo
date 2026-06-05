@@ -1,0 +1,9 @@
+# Dependencies (cloned repos)
+tmp/
+
+# Generated code
+src/gen/
+dist/
+
+# Node modules
+node_modules/

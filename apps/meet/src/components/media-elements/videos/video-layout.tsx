@@ -1,0 +1,369 @@
+import React, {
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+import { store, useAppDispatch, useAppSelector } from '@/store';
+import { setWebcamPaginating } from '@/store/slices/session-slice';
+import { VideoParticipantProps } from '@/components/media-elements/videos/video-participant';
+import PinnedLayout from '@/components/media-elements/videos/layouts/pinned-layout';
+import VerticalLayout from '@/components/media-elements/videos/layouts/vertical-layout';
+import DefaultLayout from '@/components/media-elements/videos/layouts/default-layout';
+import {
+  formatNextPreButton,
+  getElmsForMobile,
+  getElmsForPc,
+  getElmsForPCExtendedVerticalView,
+  getElmsForTablet,
+} from '@/components/media-elements/videos/helpers/utils';
+import { useDeviceInfo } from '@/components/media-elements/videos/helpers/use-device-info';
+import { ChevronDown } from 'lucide-react';
+import { updateHasWebcamPages } from '@/store/slices/roomSettingsSlice';
+import { Button } from '@workspace/ui/components/button';
+
+interface IVideoLayoutProps {
+  allParticipants: ReactElement<VideoParticipantProps>[];
+  pinParticipant?: ReactElement<VideoParticipantProps>;
+  totalNumWebcams: number;
+  isVertical?: boolean;
+}
+
+const DESKTOP_PER_PAGE = 24,
+    TABLET_PER_PAGE = 9,
+    TABLET_WITH_SIDEBAR_PER_PAGE = 6,
+    MOBILE_PER_PAGE = 6,
+    MOBILE_WITH_SIDEBAR_PER_PAGE = 4,
+    PC_VERTICAL_PER_PAGE = 5,
+    PC_EXTENDED_VERTICAL_PER_PAGE = 10,
+    TABLET_VERTICAL_PER_PAGE = 4,
+    TABLET_VERTICAL_WITH_SIDEBAR_PER_PAGE = 3,
+    MOBILE_VERTICAL_PORTRAIT_PER_PAGE = 3,
+    MOBILE_VERTICAL_LANDSCAPE_PER_PAGE = 4,
+    MOBILE_VERTICAL_WITH_SIDEBAR_PER_PAGE = 2;
+
+const VideoLayout = ({
+                       allParticipants,
+                       pinParticipant,
+                       totalNumWebcams,
+                       isVertical,
+                     }: IVideoLayoutProps) => {
+  const dispatch = useAppDispatch();
+  const isEnabledExtendedVerticalCamView = useAppSelector(
+      (state) => state.bottomIconsActivity.isEnabledExtendedVerticalCamView,
+  );
+  const maxNumDisplayWebcams = useAppSelector(
+      (state) => state.roomSettings.maxNumDisplayWebcams,
+  );
+
+  const isRecorder = store.getState().session.currentUser?.isRecorder;
+  const { isMobile, isTablet, isDesktop, isSidebarOpen, isPortrait } =
+      useDeviceInfo();
+
+  const [webcamPerPage, setWebcamPerPage] = useState<number>(DESKTOP_PER_PAGE);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [enabledVerticalViewMode, setEnabledVerticalViewMode] =
+      useState(isVertical);
+
+  useEffect(() => {
+    let verticalMode = !!isVertical;
+    if (typeof pinParticipant !== 'undefined') {
+      verticalMode = true;
+    }
+    setEnabledVerticalViewMode(verticalMode);
+  }, [dispatch, isVertical, pinParticipant]);
+
+  useEffect(() => {
+    // 1. Determine the default value based on device type.
+    let deviceMax = DESKTOP_PER_PAGE;
+    if (isTablet) {
+      deviceMax = TABLET_PER_PAGE;
+    } else if (isMobile) {
+      deviceMax = MOBILE_PER_PAGE;
+    }
+
+    // 2. Determine the user's effective limit.
+    const effectiveUserLimit =
+        maxNumDisplayWebcams && maxNumDisplayWebcams > 0
+            ? maxNumDisplayWebcams
+            : deviceMax;
+
+    let perPage: number;
+
+    // 3. Calculate the ideal number of webcams based purely on the current layout.
+    if (isMobile) {
+      if (enabledVerticalViewMode) {
+        if (isPortrait) {
+          perPage = MOBILE_VERTICAL_PORTRAIT_PER_PAGE;
+        } else {
+          // landscape
+          perPage = isSidebarOpen
+              ? MOBILE_VERTICAL_WITH_SIDEBAR_PER_PAGE
+              : MOBILE_VERTICAL_LANDSCAPE_PER_PAGE;
+        }
+      } else {
+        // default mode
+        perPage = isSidebarOpen
+            ? MOBILE_WITH_SIDEBAR_PER_PAGE
+            : MOBILE_PER_PAGE;
+      }
+    } else if (isTablet) {
+      if (enabledVerticalViewMode) {
+        perPage = isSidebarOpen
+            ? TABLET_VERTICAL_WITH_SIDEBAR_PER_PAGE
+            : TABLET_VERTICAL_PER_PAGE;
+      } else {
+        // default mode
+        perPage = isSidebarOpen
+            ? TABLET_WITH_SIDEBAR_PER_PAGE
+            : TABLET_PER_PAGE;
+      }
+    } else {
+      // PC
+      if (enabledVerticalViewMode) {
+        perPage = isEnabledExtendedVerticalCamView
+            ? PC_EXTENDED_VERTICAL_PER_PAGE
+            : PC_VERTICAL_PER_PAGE;
+        if (pinParticipant) {
+          // if vertical view has pin, we will lose space.
+          perPage -= isEnabledExtendedVerticalCamView ? 2 : 1;
+        }
+      } else if (pinParticipant) {
+        // if we have a pinned participant, the rest will be in a vertical view
+        perPage = isEnabledExtendedVerticalCamView
+            ? PC_EXTENDED_VERTICAL_PER_PAGE
+            : PC_VERTICAL_PER_PAGE;
+      } else {
+        perPage = DESKTOP_PER_PAGE;
+      }
+    }
+
+    // 4. The final value is the MINIMUM of the layout's ideal value and the user's limit.
+    //    This ensures the user's data saving preference is always respected as a hard ceiling.
+    setWebcamPerPage(Math.min(perPage, effectiveUserLimit));
+  }, [
+    isEnabledExtendedVerticalCamView,
+    enabledVerticalViewMode,
+    pinParticipant,
+    isMobile,
+    isTablet,
+    isPortrait,
+    isSidebarOpen,
+    maxNumDisplayWebcams,
+  ]);
+
+  useEffect(() => {
+    const hasPages = allParticipants.length > webcamPerPage;
+    dispatch(updateHasWebcamPages(hasPages));
+  }, [allParticipants.length, webcamPerPage, dispatch]);
+
+  const prePage = useCallback((currPage: number) => {
+    const newCurrentPage = currPage - 1;
+    setCurrentPage(newCurrentPage);
+  }, []);
+
+  const nextPage = useCallback((currPage: number) => {
+    const newCurrentPage = currPage + 1;
+    setCurrentPage(newCurrentPage);
+  }, []);
+
+  const paginatedParticipants = useMemo(() => {
+    // If we don't have enough participants to require pagination, just return them all.
+    if (allParticipants.length <= webcamPerPage) {
+      return allParticipants;
+    }
+
+    // Start with the max number of items per page. This will be adjusted if we need pagination buttons.
+    let itemsToDisplay = webcamPerPage;
+
+    // Determine if a "Previous" button is needed. We don't show pagination for recorders.
+    const hasPrevPage = !isRecorder && currentPage > 1;
+    if (hasPrevPage) {
+      // Decrement the number of items to show, making space for the "Previous" button.
+      itemsToDisplay--;
+    }
+
+    // Calculate the starting index for the slice.
+    // This logic is a bit dense: it accounts for the shifting number of items on each page
+    // (e.g., page 1 has one pagination button, middle pages have two, the last page has one).
+    const startIndex = hasPrevPage
+        ? (currentPage - 1) * itemsToDisplay - (currentPage - 2)
+        : 0;
+
+    // Slice the array to find all participants that would come *after* the current page's items.
+    const potentialNextItems = allParticipants.slice(
+        startIndex + itemsToDisplay,
+    );
+    // Determine if a "Next" button is needed based on the remaining items.
+    const hasNextPage = !isRecorder && potentialNextItems.length > 0;
+    if (hasNextPage) {
+      // Decrement the number of items to show, making space for the "Next" button.
+      itemsToDisplay--;
+    }
+
+    // Now that we have the final number of items to display, calculate the end index.
+    const endIndex = startIndex + itemsToDisplay;
+    // Slice the main array to get the participants for the current page.
+    const display = allParticipants.slice(startIndex, endIndex);
+
+    // If a "Next" button is needed, create the button component and add it to the end of our display array.
+    if (hasNextPage) {
+      display.push(
+          <Button
+              key="next-page"
+              role="button"
+              className="video-camera-item webcam-next-page order-3 relative bg-card text-foreground cursor-pointer flex items-center justify-between"
+              onClick={() => nextPage(currentPage)}
+              variant="ghost"
+          >
+            <div className="left flex-1 flex justify-center items-center absolute top-0 left-0 w-full h-full">
+              {formatNextPreButton(potentialNextItems)}
+            </div>
+            <div className="right pb-4 -rotate-90 absolute top-[calc(50%-12px)] right-0">
+              <ChevronDown />
+            </div>
+          </Button>,
+      );
+    }
+
+    // If a "Previous" button is needed, create the button component and add it to the beginning of our display array.
+    if (hasPrevPage) {
+      // Get the list of participants that were on the previous pages.
+      const prevItems = allParticipants.slice(0, startIndex);
+      // The unshift() method adds one or more elements to the beginning of an array.
+      display.unshift(
+          <Button
+              key="prev-page"
+              role="button"
+              className="video-camera-item webcam-prev-page order-1 relative bg-card text-foreground cursor-pointer flex items-center justify-between"
+              onClick={() => prePage(currentPage)}
+              variant="ghost"
+          >
+            <div className="right rotate-90 absolute top-[calc(50%-12px)] left-3">
+              <ChevronDown />
+            </div>
+            <div className="left flex-1 flex justify-center items-center absolute top-0 left-0 w-full h-full">
+              {formatNextPreButton(prevItems)}
+            </div>
+          </Button>,
+      );
+    }
+
+    // Return the final array of components to be rendered.
+    return display;
+  }, [
+    isRecorder,
+    nextPage,
+    prePage,
+    allParticipants,
+    webcamPerPage,
+    currentPage,
+  ]);
+
+  const structuredLayout = useMemo(() => {
+    // This memoized value takes the paginated items (including buttons)
+    // and passes them directly to the correct layout helper.
+    let layout: ReactElement[];
+
+    if (isMobile) {
+      layout = getElmsForMobile(
+          paginatedParticipants,
+          isPortrait,
+          !!enabledVerticalViewMode,
+          isSidebarOpen,
+      );
+    } else if (isTablet) {
+      layout = getElmsForTablet(
+          paginatedParticipants,
+          !!enabledVerticalViewMode,
+          isSidebarOpen,
+      );
+    } else {
+      // PC
+      if (enabledVerticalViewMode && isEnabledExtendedVerticalCamView) {
+        layout = getElmsForPCExtendedVerticalView(paginatedParticipants);
+      } else {
+        layout = getElmsForPc(paginatedParticipants, !!enabledVerticalViewMode);
+      }
+    }
+    return layout;
+  }, [
+    paginatedParticipants,
+    isMobile,
+    isTablet,
+    isPortrait,
+    enabledVerticalViewMode,
+    isSidebarOpen,
+    isEnabledExtendedVerticalCamView,
+  ]);
+
+  useEffect(() => {
+    const isPaginating =
+        allParticipants.length > webcamPerPage && currentPage > 1;
+    dispatch(setWebcamPaginating(isPaginating));
+  }, [allParticipants.length, webcamPerPage, currentPage, dispatch]);
+
+  const allParticipantsCount = useMemo(
+      () => allParticipants.length,
+      [allParticipants],
+  );
+
+  useEffect(() => {
+    // This effect manages page number resets.
+    // It resets to page 1 if the current page becomes invalid due to changes
+    // in participant count or layout (which affects webcamPerPage).
+    const totalPages = Math.ceil(allParticipantsCount / webcamPerPage);
+    if (
+        currentPage > totalPages ||
+        (allParticipantsCount > 0 && currentPage === 0)
+    ) {
+      setCurrentPage(1);
+    }
+    //eslint-disable-next-line
+  }, [allParticipantsCount, webcamPerPage]);
+
+  if (!totalNumWebcams) {
+    return null;
+  }
+
+  if (pinParticipant) {
+    return (
+        <PinnedLayout
+            participantsToRender={structuredLayout}
+            pinParticipant={pinParticipant}
+            totalNumWebcams={totalNumWebcams}
+            currentPage={currentPage}
+            isSidebarOpen={isSidebarOpen}
+            isEnabledExtendedVerticalCamView={isEnabledExtendedVerticalCamView}
+            isDesktop={isDesktop}
+        />
+    );
+  }
+
+  if (enabledVerticalViewMode) {
+    return (
+        <VerticalLayout
+            participantsToRender={structuredLayout}
+            pinParticipant={pinParticipant}
+            totalNumWebcams={totalNumWebcams}
+            currentPage={currentPage}
+            isSidebarOpen={isSidebarOpen}
+            isEnabledExtendedVerticalCamView={isEnabledExtendedVerticalCamView}
+            isDesktop={isDesktop}
+        />
+    );
+  }
+
+  return (
+      <DefaultLayout
+          participantsToRender={structuredLayout}
+          totalNumWebcams={totalNumWebcams}
+          webcamPerPage={webcamPerPage}
+          currentPage={currentPage}
+      />
+  );
+};
+
+export default VideoLayout;

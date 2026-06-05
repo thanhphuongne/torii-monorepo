@@ -1,0 +1,200 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { RoomMetadataSchema } from '@workspace/protocol';
+import { create } from '@bufbuild/protobuf';
+
+import {
+  ICurrentRoom,
+  ICurrentUser,
+  ICurrentUserMetadata,
+  IRoomMetadata,
+  IScreenSharing,
+  ISession,
+  UserDeviceType,
+} from '@/store/slices/interfaces/session';
+
+const initialState: ISession = {
+  token: '',
+  screenSharing: {
+    isActive: false,
+    sharedBy: '',
+  },
+  isActiveRtmpBroadcasting: false,
+  isActiveRecording: false,
+  isWebcamPaginating: false,
+  isStartup: true,
+  totalAudioSubscribers: 0,
+  totalVideoSubscribers: 0,
+  userDeviceType: UserDeviceType.DESKTOP,
+  isCloud: false,
+  currentRoom: {
+    sid: '',
+    roomId: '',
+    metadata: create(RoomMetadataSchema, {
+      roomTitle: 'Torii Nihongo',
+      welcomeMessage: 'Welcome to Torii Nihongo!',
+      isRecording: false,
+      isActiveRtmp: false,
+      parentRoomId: '',
+      isBreakoutRoom: false,
+      startedAt: Date.now().toString(),
+      roomFeatures: {
+        allowWebcams: true,
+        muteOnStart: false,
+        allowScreenShare: true,
+        allowRtmp: true,
+        allowViewOtherWebcams: true,
+        allowViewOtherUsersList: true,
+        adminOnlyWebcams: false,
+        allowPolls: true,
+        roomDuration: '0',
+        allowVirtualBg: true,
+        allowRaiseHand: true,
+        recordingFeatures: {
+          isAllow: true,
+          isAllowCloud: true,
+          enableAutoCloudRecording: false,
+          isAllowLocal: true,
+          onlyRecordAdminWebcams: false,
+        },
+        chatFeatures: {
+          isAllow: true,
+          isAllowFileUpload: true,
+          allowedFileTypes: ['jpg', 'png', 'zip'],
+        },
+        whiteboardFeatures: {
+          isAllow: true,
+          visible: false,
+          whiteboardFileId: '',
+          fileName: '',
+          filePath: '',
+          totalPages: 0,
+        },
+        externalMediaPlayerFeatures: {
+          isAllow: true,
+          isActive: false,
+        },
+        waitingRoomFeatures: {
+          isActive: false,
+          waitingRoomMsg: '',
+        },
+        breakoutRoomFeatures: {
+          isAllow: true,
+        },
+        displayExternalLinkFeatures: {
+          isAllow: true,
+        },
+        ingressFeatures: {
+          isAllow: true,
+        },
+        insightsFeatures: {
+          isAllow: true,
+          transcriptionFeatures: {
+            isAllow: true,
+            isAllowTranslation: true,
+          },
+          aiFeatures: {
+            isAllow: true,
+            aiTextChatFeatures: {
+              isAllow: true,
+            },
+          },
+        },
+        endToEndEncryptionFeatures: {
+          isEnabled: false,
+          includedChatMessages: false,
+          includedWhiteboard: false,
+        },
+      },
+      copyrightConf: {
+        display: true,
+        text: 'Powered by <a href="https://torii-nihongo.example" target="_blank">Torii Nihongo</a>',
+      },
+    }),
+  },
+};
+
+const sessionSlice = createSlice({
+  name: 'session',
+  initialState,
+  reducers: {
+    addToken: (state, action: PayloadAction<string>) => {
+      state.token = action.payload;
+    },
+    addServerVersion: (state, action: PayloadAction<string>) => {
+      state.serverVersion = action.payload;
+    },
+    toggleStartup: (state, action: PayloadAction<boolean>) => {
+      state.isStartup = action.payload;
+    },
+    addCurrentUser: (state, action: PayloadAction<ICurrentUser>) => {
+      state.currentUser = action.payload;
+    },
+    addCurrentRoom: (state, action: PayloadAction<ICurrentRoom>) => {
+      state.currentRoom.roomId = action.payload.roomId;
+      state.currentRoom.sid = action.payload.sid;
+      if (action.payload.metadata) {
+        state.currentRoom.metadata = action.payload.metadata;
+      }
+    },
+    updateScreenSharing: (state, action: PayloadAction<IScreenSharing>) => {
+      state.screenSharing = action.payload;
+    },
+    setWebcamPaginating: (state, action: PayloadAction<boolean>) => {
+      state.isWebcamPaginating = action.payload;
+    },
+    updateCurrentUserMetadata: (
+      state,
+      action: PayloadAction<ICurrentUserMetadata>,
+    ) => {
+      if (state.currentUser) {
+        state.currentUser.metadata = action.payload;
+      }
+    },
+    updateCurrentRoomMetadata: (
+      state,
+      action: PayloadAction<IRoomMetadata>,
+    ) => {
+      if (state.currentRoom) {
+        state.currentRoom.metadata = action.payload;
+        state.isActiveRtmpBroadcasting = action.payload.isActiveRtmp ?? false;
+        state.isActiveRecording = action.payload.isRecording ?? false;
+      }
+    },
+    updateTotalVideoSubscribers: (state, action: PayloadAction<number>) => {
+      state.totalVideoSubscribers = action.payload;
+    },
+    updateTotalAudioSubscribers: (state, action: PayloadAction<number>) => {
+      state.totalAudioSubscribers = action.payload;
+    },
+    updateMuteOnStart: (state, action: PayloadAction<boolean>) => {
+      if (state.currentRoom.metadata?.roomFeatures) {
+        state.currentRoom.metadata.roomFeatures.muteOnStart = action.payload;
+      }
+    },
+    updateUserDeviceType: (state, action: PayloadAction<UserDeviceType>) => {
+      state.userDeviceType = action.payload;
+    },
+    updateIsCloud: (state, action: PayloadAction<boolean>) => {
+      state.isCloud = action.payload;
+    },
+  },
+});
+
+export const {
+  addToken,
+  addServerVersion,
+  toggleStartup,
+  addCurrentUser,
+  addCurrentRoom,
+  updateScreenSharing,
+  setWebcamPaginating,
+  updateCurrentUserMetadata,
+  updateCurrentRoomMetadata,
+  updateTotalVideoSubscribers,
+  updateTotalAudioSubscribers,
+  updateMuteOnStart,
+  updateUserDeviceType,
+  updateIsCloud,
+} = sessionSlice.actions;
+
+export default sessionSlice.reducer;

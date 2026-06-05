@@ -1,0 +1,2271 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================================================
+// ENUMS
+// ==================================================
+
+// --- Academy Quiz/Exam (NEW) ---
+
+enum AcademyExamType {
+  QUIZ
+  MODULE_TEST
+  FINAL_EXAM
+}
+
+enum AcademyExamStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AcademyQuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_TEXT
+  SHORT_ANSWER
+  GROUP_PARENT
+}
+
+enum AcademyQuestionCategoryType {
+  VOCABULARY
+  GRAMMAR
+  KANJI
+  READING
+  LISTENING
+}
+
+enum AcademyQuestionReviewStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum AcademyAssessmentKind {
+  LESSON_CHECKPOINT
+  MODULE_CHECKPOINT
+  FINAL_EXAM
+}
+
+enum AcademyAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  CANCELLED
+}
+
+// --- Assessment ---
+
+enum AssignmentType {
+  TEXT // Text answer only
+  FILE // File upload only
+  BOTH // Text + File
+}
+
+enum SubmissionStatus {
+  DRAFT // Đang soạn (chưa nộp)
+  SUBMITTED // Đã nộp
+  GRADED // Đã chấm
+  RETURNED // Trả lại để sửa
+}
+
+// --- Flashcard / SRS ---
+
+enum SrsState {
+  LEARNING
+  MASTERED
+}
+
+enum StudySetSourceType {
+  USER
+  SYSTEM
+}
+
+// --- Commerce ---
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  PAID
+  CANCELLED
+  REFUNDED
+  FAILED
+}
+
+enum OrderType {
+  COURSE
+  BUNDLE
+  SUBSCRIPTION
+}
+
+enum PaymentMethod {
+  PAYOS
+  BANK_TRANSFER
+  MANUAL
+  COIN
+}
+
+enum PaymentGateway {
+  PAYOS
+  MOMO
+  STRIPE
+  INTERNAL
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CouponDiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+/// Chỉ còn GLOBAL — không còn giới hạn theo từng sản phẩm (liveClass/vod) qua metadata.
+enum CouponScope {
+  GLOBAL
+}
+
+enum VodStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CohortStatus {
+  DRAFT
+  PENDING_APPROVAL
+  OPENING
+  COMPLETED
+  ARCHIVED
+}
+
+enum LiveClassStatus {
+  DRAFT
+  OPENING      // Đang tuyển sinh
+  IN_PROGRESS  // Đang diễn ra (đóng đăng ký, đang học)
+  COMPLETED
+  ARCHIVED
+}
+
+enum MinStudentsEnforcement {
+  STRICT
+  NOTIFY
+  DISABLED
+}
+
+enum LiveScheduleRequestType {
+  RESCHEDULE
+}
+
+enum LiveScheduleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// --- Support ---
+
+enum TicketType {
+  REFUND
+  SUPPORT
+  ERROR_REPORT
+}
+
+enum TicketStatus {
+  PENDING
+  PROCESSING
+  RESOLVED
+  CANCELLED
+}
+
+// --- Gamification ---
+
+enum ActivityType {
+  LESSON_COMPLETE
+  QUIZ_ANSWER
+  VIDEO_WATCH
+  REVIEW
+  PRACTICE
+  FLASHCARD_REVIEW
+  EXAM_COMPLETE
+  BLOG_CREATE
+  COMMENT_CREATE
+  LOGIN
+}
+
+enum GamificationTransactionType {
+  EARN // Nhận điểm từ hoạt động học tập
+  REDEEM // Đổi điểm lấy coupon/quà
+  BONUS // Điểm thưởng bonus
+  EXPIRATION // Điểm hết hạn
+  OTHER // Khác
+}
+
+enum GamificationCurrency {
+  POINT
+  XP
+}
+
+enum AcademyFolderType {
+  LIVE_CLASS_SHARED
+  GENERAL
+  SHARED
+  PRIVATE
+}
+
+enum AcademyFolderOwnerType {
+  SYSTEM
+  LECTURER
+  LIVE_CLASS
+  COURSE_VOD
+  USER
+}
+
+enum AcademyResourceType {
+  FILE
+  LINK
+}
+
+enum AcademyResourceVisibility {
+  ENROLLED_ONLY
+  PUBLIC
+  PRIVATE
+}
+
+// ==================================================
+// 1. LIVE SESSIONS & SCHEDULING (Meet / phòng học)
+// ==================================================
+
+// --- Room Artifacts ---
+
+model RoomInfo {
+  id                 Int    @id @default(autoincrement())
+  roomTitle          String @default("") @map("room_title") @db.VarChar(255)
+  roomId             String @map("room_id") @db.VarChar(64)
+  sid                String @unique @map("sid") @db.VarChar(64)
+  joinedParticipants Int    @default(0) @map("joined_participants")
+
+  liveClassId String? @map("live_class_id") @db.Uuid
+  weekday     Int?
+  startTime   String? @map("start_time") @db.VarChar(20)
+
+  // Int, 1 for true 2 for false
+  isRunning    Int    @default(0) @map("is_running")
+  isRecording  Int    @default(0) @map("is_recording")
+  recorderId   String @default("") @map("recorder_id") @db.VarChar(36)
+  isActiveRtmp Int    @default(0) @map("is_active_rtmp")
+  rtmpNodeId   String @default("") @map("rtmp_node_id") @db.VarChar(36)
+  webhookUrl   String @default("") @map("webhook_url") @db.VarChar(255)
+
+  isBreakoutRoom Int       @default(0) @map("is_breakout_room")
+  parentRoomId   String    @default("") @map("parent_room_id") @db.VarChar(64)
+  creationTime   Int       @default(0) @map("creation_time")
+  created        DateTime  @default(now()) @map("created")
+  ended          DateTime? @map("ended") // Nullable - null means not ended yet (PostgreSQL compatible)
+  modified       DateTime  @default(now()) @updatedAt @map("modified")
+
+  // Relations
+  artifacts RoomArtifact[]
+
+  @@index([roomId, isRunning], map: "idx_room_id")
+  @@index([liveClassId])
+  @@map("room_info")
+}
+
+model RoomFile {
+  id        Int      @id @default(autoincrement())
+  fileId    String   @unique @map("file_id")
+  roomId    String   @map("room_id")
+  userId    String   @map("user_id")
+  filePath  String   @map("file_path")
+  fileType  String   @map("file_type")
+  mimeType  String   @map("mime_type")
+  fileSize  Float    @default(0) @map("file_size")
+  createdAt DateTime @default(now()) @map("created")
+
+  @@index([roomId])
+  @@map("room_files")
+}
+
+model RoomArtifact {
+  id          BigInt   @id @default(autoincrement())
+  artifactId  String   @unique @map("artifact_id") @db.VarChar(64)
+  roomTableId Int      @map("room_table_id")
+  roomId      String   @map("room_id") @db.VarChar(255)
+  type        String   @db.VarChar(100)
+  metadata    Json?
+  created     DateTime @default(now())
+
+  // Relation to RoomInfo
+  roomInfo RoomInfo @relation(fields: [roomTableId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+
+  @@index([artifactId], map: "idx_artifact_artifact_id")
+  @@index([roomId], map: "idx_artifact_room_id")
+  @@index([type], map: "idx_artifact_type")
+  @@map("room_artifacts")
+}
+
+// ==================================================
+// 2. FLASHCARD / SRS
+// ==================================================
+
+// --- Flashcards & Notes ---
+
+model StudySet {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String  @map("user_id") @db.Uuid
+  title       String  @db.VarChar(255)
+  description String? @db.Text
+  isPublic    Boolean @default(false) @map("is_public")
+  sourceType  StudySetSourceType @default(USER) @map("source_type")
+  shareToken  String? @unique @map("share_token") @db.VarChar(64)
+  settings    Json?   @default("{}") @map("settings") @db.JsonB
+  stats       Json?   @default("{\"cardCount\": 0, \"masteredCount\": 0}") @map("stats") @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  setCards SetCard[]
+
+  @@index([userId])
+  @@index([sourceType, isPublic])
+  @@map("academy_study_sets")
+}
+
+model SetCard {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studySetId      String   @map("study_set_id") @db.Uuid
+  term            String   @map("term") @db.Text
+  definition      String   @map("definition") @db.Text
+  hint            String?  @map("hint") @db.Text
+  mediaUrl        String?  @map("media_url") @db.Text
+  languageDetails Json?    @map("language_details") @db.JsonB
+  tags            String[] @default([]) @db.VarChar(50)
+
+  sourceDocumentId String? @map("source_document_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  studySet       StudySet   @relation(fields: [studySetId], references: [id], onDelete: Cascade)
+  sourceDocument FileAsset? @relation("SetCardSourceDocument", fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  srsProgresses  SetCardSrsProgress[]
+
+  @@index([studySetId])
+  @@index([sourceDocumentId])
+  @@map("academy_set_cards")
+}
+
+model SetCardSrsProgress {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  setCardId    String   @map("set_card_id") @db.Uuid
+  srsState     SrsState @default(LEARNING) @map("srs_state")
+  nextReviewAt DateTime @default(now()) @map("next_review_at")
+  interval     Int      @default(0) @map("interval")
+  easeFactor   Decimal  @default(2.5) @map("ease_factor") @db.Decimal(4, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  setCard SetCard @relation(fields: [setCardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, setCardId])
+  @@index([userId, nextReviewAt])
+  @@index([setCardId])
+  @@map("academy_set_card_srs_progress")
+}
+
+// ==================================================
+// 7. USER & AUTH
+// ==================================================
+
+// --- Identity ---
+
+model User {
+  id          String @id @default(uuid()) @db.Uuid
+  email       String @unique @db.VarChar(255)
+  displayName String @map("display_name") @db.VarChar(100)
+
+  // Auth fields
+  password String? @db.VarChar(255) // Nullable for OAuth-only users
+
+  // Profile fields
+  avatarUrl String? @map("avatar_url") @db.Text
+
+  // Metadata (JSON for flexibility)
+  appMetadata  Json? @default("{}") @map("app_metadata") // App-specific data (providers, etc.)
+  userMetadata Json? @default("{}") @map("user_metadata") // User profile data from OAuth
+
+  // Role
+  role String @default("learner") @db.VarChar(50)
+
+  // Timestamps (replace status field - Supabase pattern)
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamp() // null = not verified (pending)
+  bannedUntil  DateTime? @map("banned_until") @db.Timestamp() // null = not banned, value = banned until this time
+  lastSignInAt DateTime? @map("last_sign_in_at") @db.Timestamp()
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamp() // null = not deleted, value = soft deleted
+
+  // Relations
+  identities     UserIdentity[] // OAuth providers (email, google, etc.)
+  sessions       Session[]
+  twoFactorAuth  TwoFactorAuth?
+  studySets      StudySet[]
+  comments       Comment[]
+  auditLogs      AuditLog[]     @relation("UserAuditLogs")
+  orders         Order[]
+  tickets        Ticket[]       @relation("UserTickets")
+  handledTickets Ticket[]       @relation("HandlerTickets")
+  certificates   Certificate[]
+
+  // Gamification Relations
+  gamification UserGamification?
+  streak       Streak?
+  streakLogs   StreakLog[]
+
+  // Commerce (New)
+  couponUsages CouponUsage[]
+
+  commentLikes CommentLike[]
+
+  // History Relations
+  gamificationHistories           GamificationHistory[]
+  setCardSrsProgresses            SetCardSrsProgress[]
+  blogs                           Blog[]
+  // Academy V2 relations
+  academyEnrollments              Enrollment[]
+  academyAssignmentSubmissions    AssignmentSubmission[]
+  academyUserLessonProgress       UserLessonProgress[]   @relation("AcademyUserLessonProgress")
+  academyClassesTaught            LiveClass[]            @relation("AcademyClassTeacher")
+  academyVodPackagesTaught        VodPackage[]           @relation("AcademyVodTeacher")
+  academyClassReviews             CourseReview[]
+  userAchievements                UserAchievement[]
+  academyClassAttendances         ClassAttendance[]
+  liveScheduleRequests            LiveScheduleRequest[]  @relation("LiveScheduleRequestRequester")
+  reviewedLiveScheduleRequests    LiveScheduleRequest[]  @relation("LiveScheduleRequestReviewer")
+  proposedTeacherScheduleRequests LiveScheduleRequest[]  @relation("LiveScheduleRequestProposedTeacher")
+  aiUserSubscriptions             AiUserSubscription[]
+  walletBalance                   Decimal                @default(0) @map("wallet_balance") @db.Decimal(12, 2)
+  walletTransactions              WalletTransaction[]
+  deviceTokens                    UserDeviceToken[]
+  academyResourcesCreated         AcademyResource[]      @relation("AcademyResourceCreator")
+  academyExamAttempts             AcademyExamAttempt[]
+
+  // JLPT Mock (isolated)
+  jlptMockAttempts JlptMockAttempt[] @relation("JlptMockAttemptUser")
+
+  // Onboarding
+  isOnboarded      Boolean           @default(false) @map("is_onboarded")
+  /// Mục tiêu JLPT để gợi ý khoá học (N1..N5)
+  jlptTarget   String? @map("jlpt_target") @db.VarChar(4)
+  /// Trình độ hiện tại (tuỳ chọn)
+  currentLevel String? @map("current_level") @db.VarChar(20)
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model UserIdentity {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Provider info
+  provider   String @db.VarChar(50) // 'email', 'google', etc.
+  providerId String @map("provider_id") @db.VarChar(255) // Provider's user ID
+
+  // Provider metadata
+  providerData Json? @map("provider_data") // Raw data from provider
+
+  // Timestamps
+  lastSignInAt DateTime? @map("last_sign_in_at") @db.Timestamp()
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId]) // Prevent duplicate provider accounts
+  @@index([userId])
+  @@index([provider])
+  @@map("user_identities")
+}
+
+model Session {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+  tokenHash String @unique @map("token_hash") @db.VarChar(64) // SHA-256 hash
+
+  // Device & Metadata
+  deviceInfo String? @map("device_info") @db.VarChar(100) // e.g., "iPhone 13, iOS 15" or "Chrome on Windows"
+  userAgent  String? @map("user_agent")  @db.Text
+  ipAddress  String? @map("ip_address") @db.VarChar(45)  // Support IPv6
+
+  expiresAt DateTime  @map("expires_at") @db.Timestamp()
+  revokedAt DateTime? @map("revoked_at") @db.Timestamp()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model TwoFactorAuth {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // 2FA Status
+  isEnabled Boolean @default(false) @map("is_enabled")
+  method    String? @db.VarChar(20) // Currently only 'totp' supported (Google Authenticator)
+
+  // TOTP Configuration (for Google Authenticator)
+  totpSecret      String?  @map("totp_secret") @db.VarChar(255) // Encrypted with AES-256-GCM
+  totpBackupCodes String[] @default([]) @map("totp_backup_codes") @db.VarChar(100) // Hashed with Argon2
+
+  // Security & Metadata
+  enabledAt      DateTime? @map("enabled_at") @db.Timestamp()
+  lastUsedAt     DateTime? @map("last_used_at") @db.Timestamp()
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until") @db.Timestamp()
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("two_factor_auth")
+}
+
+// --- Permissions & Audit ---
+
+model Role {
+  code        String   @id @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
+
+  @@map("roles")
+}
+
+model RolePermission {
+  roleCode       String   @map("role_code") @db.VarChar(50)
+  permissionCode String   @map("permission_code") @db.VarChar(100)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  @@id([roleCode, permissionCode])
+  @@index([roleCode])
+  @@map("role_permissions")
+}
+
+model AuditLog {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Who performed the action
+  userId String @map("user_id") @db.Uuid
+
+  // What action was performed
+  action   String  @db.VarChar(100) // e.g., "permission.grant", "user.create", "course.delete"
+  entity   String  @db.VarChar(100) // e.g., "role_permission", "user", "course"
+  entityId String? @map("entity_id") @db.VarChar(255) // ID of affected entity
+
+  // Action details
+  description String @db.Text // Human-readable description
+  metadata    Json? // Flexible JSON for action-specific data
+
+  // State changes (for updates)
+  oldValues Json? @map("old_values") // Previous state
+  newValues Json? @map("new_values") // New state
+
+  // Timestamp
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  user User @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// --- Orders & Payments ---
+
+model Order {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code          String        @unique @db.VarChar(50) // ORD-20260306-XXXX
+  userId        String        @map("user_id") @db.Uuid
+  status        OrderStatus   @default(PENDING)
+  subTotal      Decimal       @map("sub_total") @db.Decimal(12, 2)
+  discountTotal Decimal       @map("discount_total") @db.Decimal(12, 2)
+  grandTotal    Decimal       @map("grand_total") @db.Decimal(12, 2)
+  currency      String        @default("VND") @db.VarChar(10)
+  couponCode    String?       @map("coupon_code") @db.VarChar(50)
+  couponId      String?       @map("coupon_id") @db.Uuid
+  note          String?       @db.Text
+  paymentMethod PaymentMethod @map("payment_method")
+  metadata      Json?         @default("{}") @db.JsonB
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon       Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items        OrderItem[]
+  transactions Transaction[]
+  usages       CouponUsage[]
+  enrollments  Enrollment[]
+  tickets      Ticket[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("academy_orders")
+}
+
+model OrderItem {
+  id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId            String  @map("order_id") @db.Uuid
+  vodPackageId       String? @map("vod_package_id") @db.Uuid
+  cohortId           String? @map("cohort_id") @db.Uuid
+  liveClassId        String? @map("live_class_id") @db.Uuid
+  subscriptionPlanId String? @map("subscription_plan_id") @db.Uuid
+  price              Decimal @db.Decimal(12, 2)
+  /// Ảnh chụp giá/tên/mô tả dòng hàng lúc thanh toán.
+  deliverySnapshot   Json    @map("delivery_snapshot") @db.JsonB
+
+  // Relations
+  order            Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vodPackage       VodPackage?         @relation(fields: [vodPackageId], references: [id], onDelete: Cascade)
+  cohort           Cohort?             @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  liveClass        LiveClass?          @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+  subscriptionPlan AiSubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([vodPackageId])
+  @@index([cohortId])
+  @@index([liveClassId])
+  @@index([subscriptionPlanId])
+  @@map("academy_order_items")
+}
+
+model Transaction {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId         String         @map("order_id") @db.Uuid
+  gateway         PaymentGateway
+  transactionCode String?        @map("transaction_code") @db.VarChar(100)
+  amount          Decimal        @db.Decimal(12, 2)
+  status          String         @db.VarChar(20) // PENDING, SUCCESS, FAILED
+  responsePayload Json?          @map("response_payload") @db.JsonB
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([transactionCode])
+  @@map("academy_transactions")
+}
+
+// --- Coupons & Wishlist ---
+
+model Coupon {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code              String             @unique @db.VarChar(50)
+  name              String?            @db.VarChar(200)
+  description       String?            @db.Text
+  discountType      CouponDiscountType @map("discount_type")
+  discountValue     Decimal            @map("discount_value") @db.Decimal(12, 2)
+  maxDiscountAmount Decimal?           @map("max_discount_amount") @db.Decimal(12, 2)
+  minOrderValue     Decimal?           @map("min_order_value") @db.Decimal(12, 2)
+  usageLimit        Int?               @map("usage_limit")
+  usageCount        Int                @default(0) @map("usage_count")
+  perUserLimit      Int                @default(1) @map("per_user_limit")
+  /// Phạm vi: hiện chỉ GLOBAL. Coupon cá nhân phân biệt bằng `ownerId`, không bằng scope.
+  startDate         DateTime?          @map("start_date")
+  endDate           DateTime?          @map("end_date")
+  status            CouponStatus       @default(ACTIVE)
+  scope             CouponScope        @default(GLOBAL)
+  /// Ví dụ coupon đổi điểm gamification — gắn một user
+  ownerId           String?            @map("owner_id") @db.Uuid
+  /// Logical source for audit/analytics: MANUAL, CAMPAIGN, GAMIFICATION_REWARD, etc.
+  source            String?            @db.VarChar(50)
+  metadata          Json?              @default("{}") @db.JsonB
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  orders Order[]
+  usages CouponUsage[]
+
+  @@map("academy_coupons")
+}
+
+model CouponUsage {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  couponId String   @map("coupon_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  orderId  String   @map("order_id") @db.Uuid
+  usedAt   DateTime @default(now()) @map("used_at")
+
+  // Relations
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade) // Added implicitly if needed
+
+  @@index([couponId])
+  @@index([userId])
+  @@map("academy_coupon_usages")
+}
+
+// ==================================================
+// GAMIFICATION
+// ==================================================
+
+// --- Gamification ---
+
+model UserGamification {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // --- XP & Level System ---
+  level     Int @default(1)
+  currentXp Int @default(0) @map("current_xp") // XP hiện tại ở level này
+  totalXp   Int @default(0) @map("total_xp") // Tổng XP tích lũy (dùng để đua Top)
+
+  // --- Currency (Economy - Chuẩn bị sẵn cho tương lai) ---
+  points Int @default(0) // Điểm thưởng dùng để đổi mã giảm giá
+  gems   Int @default(0) // Đơn vị cao cấp (nếu có)
+
+  // --- Streak System (Gộp từ UserStreak cũ vào đây) ---
+  currentStreak  Int     @default(0) @map("current_streak")
+  longestStreak  Int     @default(0) @map("longest_streak")
+  lastActiveDate String? @map("last_active_date") @db.VarChar(10) // YYYY-MM-DD
+  freezeCount    Int     @default(0) @map("freeze_count") // Số 'bùa' bảo vệ streak
+
+  // --- Stats Aggregate (Lưu sẵn để đỡ phải count từ bảng khác) ---
+  totalActiveDays    Int @default(0) @map("total_active_days")
+  weeklyActiveCount  Int @default(0) @map("weekly_active_count")
+  monthlyActiveCount Int @default(0) @map("monthly_active_count")
+  consecutiveActiveDays Int @default(0) @map("consecutive_active_days") // Số ngày học liên tiếp để hồi phục khiên
+
+  // --- UI/UX flags (toast/modal gating) ---
+  lastToastShownDate String? @map("last_toast_shown_date") @db.VarChar(10) // YYYY-MM-DD
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Index tối ưu
+  @@index([totalXp(sort: Desc)]) // Index quan trọng nhất để lấy Leaderboard (Bảng xếp hạng)
+  @@index([userId])
+  @@map("user_gamification")
+}
+
+model Achievement {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String   @unique @db.VarChar(64)
+  category     String   @db.VarChar(32) // STREAK | CONSISTENCY | LEARNING_PROGRESS | ...
+  title        String   @db.VarChar(255)
+  description  String?  @db.Text
+  icon         String?  @db.Text
+  requirements Json     @default("{}") @db.JsonB
+  rewards      Json     @default("{}") @db.JsonB
+  isActive     Boolean  @default(true) @map("is_active")
+  orderIndex   Int      @default(0) @map("order_index")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  achievementId String    @map("achievement_id") @db.Uuid
+  isUnlocked    Boolean   @default(false) @map("is_unlocked")
+  progress      Json?     @default("{}") @db.JsonB
+  unlockedAt    DateTime? @map("unlocked_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@map("user_achievements")
+}
+
+model Streak {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  userId String @unique @map("user_id") @db.Uuid
+
+  currentStreak   Int     @default(0) @map("current_streak")
+  maxStreak       Int     @default(0) @map("max_streak")
+  lastActiveDate  String? @map("last_active_date") @db.VarChar(10) // YYYY-MM-DD
+  freezeUsedToday Boolean @default(false) @map("freeze_used_today")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("streaks")
+}
+
+model StreakLog {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  date   String @db.VarChar(10) // YYYY-MM-DD
+  status String @db.VarChar(20) // ACTIVE | FREEZE | INACTIVE
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@map("streak_logs")
+}
+
+model PointReward {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String  @db.VarChar(100)
+  description String? @db.Text
+  costPoints  Int     @map("cost_points")
+  type        String  @default("COUPON") @db.VarChar(50)
+  config      Json    @default("{}") @db.JsonB
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("point_rewards")
+}
+
+// --- Finance Ledger ---
+
+model GamificationHistory {
+  id           String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String                      @map("user_id") @db.Uuid
+  amount       Int // Số điểm biến động
+  currency     GamificationCurrency        @default(POINT)
+  type         GamificationTransactionType
+  activityType ActivityType?               @map("activity_type")
+  description  String?                     @db.Text
+  metadata     Json?                       @default("{}") // Lưu trữ achievementId, v.v.
+  createdAt    DateTime                    @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([activityType])
+  @@index([createdAt])
+  @@map("gamification_histories")
+}
+
+// ==================================================
+// 10. CONTENT & SOCIAL  (Blog / Discussion / Notification)
+// ==================================================
+
+// --- Files ---
+
+model FileAsset {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // File Identification
+  fileUrl String @unique @map("file_url") @db.Text
+
+  // File Details
+  mimeType String? @map("mime_type") @db.VarChar(100)
+  fileSize BigInt? @map("file_size")
+  isPublic Boolean @default(false) @map("is_public")
+
+  // Upload Status: 'pending' | 'uploaded' | 'failed'
+  status String @default("pending") @db.VarChar(20)
+
+  // Flexible Metadata (JSONB)
+  metadata     Json?   @default("{}") @map("metadata")
+  ownerId      String? @map("owner_id") @db.Uuid
+  moduleOrigin String? @map("module_origin") @db.VarChar(50) // 'USER', 'COURSE', 'CHAT'
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  setCardSourceDocs SetCard[]         @relation("SetCardSourceDocument")
+  academyResources  AcademyResource[]
+
+  @@index([ownerId])
+  @@index([fileUrl])
+  @@index([status])
+  @@map("file_assets")
+}
+
+// --- Blog ---
+
+model Blog {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String    @db.VarChar(255)
+  slug          String    @unique @db.VarChar(255)
+  excerpt       String?   @db.Text
+  content       String    @db.Text
+  coverImageUrl String?   @map("cover_image_url") @db.Text
+  authorId      String    @map("author_id") @db.Uuid
+  status        String    @default("draft") @db.VarChar(20) // draft, published, archived
+  publishedAt   DateTime? @map("published_at")
+  viewCount     Int       @default(0) @map("view_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([publishedAt(sort: Desc)])
+  @@index([authorId])
+  @@map("blogs")
+}
+
+// --- Discussion & Social ---
+
+model Comment {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String  @map("user_id") @db.Uuid
+  parentCommentId String? @map("parent_comment_id") @db.Uuid // For nested replies
+
+  content   String   @db.Text
+  status    String   @default("approved") @db.VarChar(20) // pending, approved, spam, deleted
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  Comment?        @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies Comment[]       @relation("CommentReplies")
+  likes   CommentLike[]
+  targets CommentTarget[]
+
+  @@index([userId])
+  @@index([parentCommentId])
+  @@index([createdAt(sort: Desc)])
+  @@map("comments")
+}
+
+model CommentTarget {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commentId  String   @map("comment_id") @db.Uuid
+  targetId   String   @map("target_id") @db.Uuid
+  targetType String   @map("target_type") @db.VarChar(20) // BLOG, COURSE_RUN, etc.
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, targetId, targetType])
+  @@index([targetId, targetType])
+  @@map("comment_targets")
+}
+
+model CommentLike {
+  commentId String   @map("comment_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("comment_likes")
+}
+
+// --- Notifications ---
+
+model Notification {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  title            String    @db.VarChar(255)
+  message          String    @db.Text
+  notificationType String?   @map("notification_type") @db.VarChar(50)
+  /// Idempotency key: dùng để chống gửi trùng cho các job/trigger (per-user).
+  /// VD: "LIVE_SESSION:STARTS_IN_30_MIN:<sessionId>"
+  dedupeKey        String?   @map("dedupe_key") @db.VarChar(160)
+  metadata         Json?     @map("data")
+  isRead           Boolean   @default(false) @map("is_read")
+  readAt           DateTime? @map("read_at")
+  sentVia          String[]  @default([]) @map("sent_via") @db.VarChar(20)
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@unique([userId, dedupeKey])
+  @@map("notifications")
+}
+
+model UserDeviceToken {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  token      String   @unique
+  platform   String? // 'android', 'ios'
+  deviceName String?  @map("device_name")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_device_tokens")
+}
+
+// ==================================================
+// 11. SUPPORT & MISC
+// ==================================================
+
+// --- Support ---
+
+model Ticket {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  handlerId   String?      @map("handler_id") @db.Uuid
+  type        TicketType   @default(SUPPORT)
+  status      TicketStatus @default(PENDING)
+  subject     String       @db.VarChar(255)
+  description String       @db.Text
+  liveClassId String?      @map("live_class_id") @db.Uuid
+  orderId     String?      @map("order_id") @db.Uuid
+  metadata    Json?        @default("{}") // Additional flexible metadata 
+
+  response  String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  user         User       @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+  handler      User?      @relation("HandlerTickets", fields: [handlerId], references: [id], onDelete: SetNull)
+  liveClass    LiveClass? @relation(fields: [liveClassId], references: [id], onDelete: SetNull)
+  order        Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  refundAmount Decimal?   @map("refund_amount") @db.Decimal(12, 2)
+
+  @@index([userId])
+  @@index([handlerId])
+  @@index([status])
+  @@index([type])
+  @@index([liveClassId])
+  @@index([orderId])
+  @@map("tickets")
+}
+
+model Certificate {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  liveClassId     String?  @map("live_class_id") @db.Uuid
+  vodPackageId    String?  @map("vod_package_id") @db.Uuid
+  enrollmentId    String   @unique @map("enrollment_id") @db.Uuid
+  certificateCode String   @unique @map("certificate_code") @db.VarChar(50)
+  issueDate       DateTime @default(now()) @map("issue_date")
+  fileUrl         String   @map("file_url") @db.Text
+  score           Decimal? @db.Decimal(5, 2)
+  metadata        Json?    @default("{}")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  liveClass  LiveClass?  @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+  vodPackage VodPackage? @relation(fields: [vodPackageId], references: [id], onDelete: Cascade)
+  enrollment Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([liveClassId])
+  @@index([vodPackageId])
+  @@map("certificates")
+}
+
+// --- Notes ---
+
+// ==================================================
+// 12. ACADEMY CORE LMS V2 (Strictly Typed — No JSON Metadata)
+// ==================================================
+
+// Syllabus status
+
+// Course Profile status
+enum CourseProfileStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  ARCHIVED
+}
+
+// Lesson content type
+enum LessonType {
+  VIDEO
+  READING
+}
+
+model CourseProfile {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String              @unique @db.VarChar(100)
+  title        String              @db.VarChar(255)
+  description  String?             @db.Text
+  level        String?             @db.VarChar(50) // N5, N4, N3, N2, N1
+  thumbnailUrl String?             @map("thumbnail_url") @db.Text
+  status       CourseProfileStatus @default(DRAFT)
+
+  // Approval workflow
+  submittedForApprovalAt DateTime? @map("submitted_for_approval_at")
+  submittedBy            String?   @map("submitted_by") @db.Uuid
+  approvedAt             DateTime? @map("approved_at")
+  approvedBy             String?   @map("approved_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  modules                  Module[]
+  vodPackages              VodPackage[]
+  cohorts                  Cohort[]
+  academyExams             AcademyExam[]
+  academyAssessmentPlans   AcademyCourseProfileAssessment[]
+
+  @@index([level])
+  @@map("academy_course_profiles")
+}
+
+// LiveTerm model has been removed to simplify the hierarchy. 
+
+// Syllabus has been removed to simplify the hierarchy as per Product-Centric refactor.
+// Modules now link directly to CourseProfile.
+/// Module (chương/bài) là folder chứa các bài học thực tế
+model Module {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseProfileId String   @map("course_profile_id") @db.Uuid
+  title           String   @db.VarChar(255)
+  orderIndex      Int      @map("order_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  courseProfile      CourseProfile                    @relation(fields: [courseProfileId], references: [id], onDelete: Cascade)
+  lessons            Lesson[]
+  academyAssessments AcademyCourseProfileAssessment[]
+
+  @@unique([courseProfileId, orderIndex])
+  @@index([courseProfileId])
+  @@map("academy_modules")
+}
+
+/// Lesson là đơn vị nội dung thực tế (VIDEO hoặc READING)
+model Lesson {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  moduleId   String     @map("module_id") @db.Uuid
+  type       LessonType
+  title      String     @db.VarChar(255)
+  orderIndex Int        @map("order_index")
+  videoUrl   String?    @map("video_url") @db.Text // Only for VIDEO type
+  /// Nội dung bài học dạng rich text (markdown) từ admin
+  content    String?    @db.Text
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @default(now()) @updatedAt @map("updated_at")
+  transcriptionStatus String     @default("IDLE") @map("transcription_status")
+
+  module             Module                           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress           UserLessonProgress[]
+  academyAssessments AcademyCourseProfileAssessment[]
+  transcriptChunks   LessonTranscriptChunk[]
+
+  @@unique([moduleId, orderIndex])
+  @@index([moduleId])
+  @@map("academy_lessons")
+}
+
+/// Assignment là nội dung bài tập tự luận (Sakubun, Kaiwa) — Master/Content Bank
+model Assignment {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title        String   @db.VarChar(255)
+  instructions String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  liveClassAssignments LiveClassAssignment[]
+
+  @@map("academy_assignments")
+}
+
+// ==================================================
+// DELIVERY LAYER
+// ==================================================
+
+model VodPackage {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseProfileId String    @map("course_profile_id") @db.Uuid
+  code            String    @unique @db.VarChar(150)
+  title           String    @db.VarChar(255)
+  price           Decimal   @db.Decimal(12, 2)
+  discountPrice   Decimal?  @map("discount_price") @db.Decimal(12, 2)
+  status          VodStatus @default(DRAFT)
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  thumbnailUrl   String?   @map("thumbnail_url") @db.Text
+  submittedForApprovalAt DateTime? @map("submitted_for_approval_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  instructorId    String?       @map("instructor_id") @db.Uuid
+  instructor      User?         @relation("AcademyVodTeacher", fields: [instructorId], references: [id], onDelete: SetNull)
+
+  courseProfile CourseProfile @relation(fields: [courseProfileId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  enrollments   Enrollment[]
+
+  reviews CourseReview[]
+  assignments LiveClassAssignment[]
+  academyFolders AcademyFolder[]
+  certificates   Certificate[]
+
+  @@index([status])
+  @@index([courseProfileId])
+  @@map("academy_vod_packages")
+}
+
+/// Đợt khai giảng LIVE: một CourseProfile có thể có nhiều Cohort; mỗi Cohort chứa các [LiveClass].
+/// Không dùng Cohort cho VOD — gói tự học là [VodPackage] gắn trực tiếp CourseProfile.
+model Cohort {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseProfileId String       @map("course_profile_id") @db.Uuid
+  code            String       @unique @db.VarChar(150)
+  name            String       @db.VarChar(255)
+  status          CohortStatus @default(DRAFT)
+  rejectionReason String?      @map("rejection_reason") @db.Text
+  submittedForApprovalAt DateTime? @map("submitted_for_approval_at")
+
+  enrollmentOpenAt  DateTime? @map("enrollment_open_at")
+  enrollmentCloseAt DateTime? @map("enrollment_close_at")
+  startDate         DateTime? @map("start_date")
+  endDate           DateTime? @map("end_date")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  courseProfile CourseProfile @relation(fields: [courseProfileId], references: [id], onDelete: Cascade)
+  liveClasses   LiveClass[]
+  orderItems    OrderItem[]
+
+  @@index([status])
+  @@index([courseProfileId])
+  @@map("academy_cohorts")
+}
+
+/// Một lớp cụ thể trong một Cohort (cùng đợt/kỳ). Enrollment LIVE trỏ vào đây, không trỏ Cohort.
+model LiveClass {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cohortId     String          @map("cohort_id") @db.Uuid
+  code         String          @unique @db.VarChar(50)
+  name         String          @db.VarChar(150)
+  status       LiveClassStatus @default(DRAFT)
+  instructorId String?         @map("instructor_id") @db.Uuid
+  maxStudents  Int?            @map("max_students")
+  price         Decimal?        @db.Decimal(12, 2)
+  discountPrice Decimal?        @map("discount_price") @db.Decimal(12, 2)
+  thumbnailUrl  String?         @map("thumbnail_url") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  cohort     Cohort @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  instructor User?  @relation("AcademyClassTeacher", fields: [instructorId], references: [id], onDelete: SetNull)
+
+  enrollments          Enrollment[]
+  assignments          LiveClassAssignment[]
+  liveSchedules        LiveSchedule[]
+  orderItems           OrderItem[]
+  liveScheduleSessions LiveScheduleSession[]
+  tickets              Ticket[]
+  certificates         Certificate[]
+  academySharedFolders AcademyFolder[]
+  reviews              CourseReview[]
+
+  @@index([cohortId])
+  @@map("academy_live_classes")
+}
+
+model LiveClassAssignment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  liveClassId   String?   @map("live_class_id") @db.Uuid
+  vodPackageId  String?   @map("vod_package_id") @db.Uuid
+  assignmentId  String    @map("assignment_id") @db.Uuid
+  titleOverride String?   @map("title_override") @db.VarChar(255)
+  openAt        DateTime? @map("open_at")
+  deadline      DateTime?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  liveClass   LiveClass?             @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+  vodPackage  VodPackage?            @relation(fields: [vodPackageId], references: [id], onDelete: Cascade)
+  assignment  Assignment             @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+
+  @@unique([liveClassId, assignmentId])
+  @@unique([vodPackageId, assignmentId])
+  @@index([liveClassId])
+  @@index([vodPackageId])
+  @@map("academy_live_class_assignments")
+}
+
+model UserLessonProgress {
+  userId        String    @map("user_id") @db.Uuid
+  enrollmentId  String    @map("enrollment_id") @db.Uuid
+  lessonId      String    @map("lesson_id") @db.Uuid
+  isCompleted   Boolean   @default(false) @map("is_completed")
+  lastWatchedAt DateTime? @map("last_watched_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user       User       @relation("AcademyUserLessonProgress", fields: [userId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([enrollmentId, lessonId])
+  @@index([enrollmentId])
+  @@index([userId])
+  @@map("academy_user_lesson_progress")
+}
+
+model AssignmentSubmission {
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  liveClassAssignmentId String           @map("live_class_assignment_id") @db.Uuid
+  userId                String           @map("user_id") @db.Uuid
+  status                SubmissionStatus @default(SUBMITTED)
+  grade                 Decimal?         @db.Decimal(5, 2)
+  feedback              String?          @db.Text
+  content               String?          @db.Text
+  fileUrls              String[]         @map("file_urls")
+  submittedAt           DateTime?        @default(now()) @map("submitted_at")
+  gradedAt              DateTime?        @map("graded_at")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  liveClassAssignment LiveClassAssignment @relation(fields: [liveClassAssignmentId], references: [id], onDelete: Cascade)
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, liveClassAssignmentId])
+  @@index([liveClassAssignmentId])
+  @@index([userId])
+  @@map("academy_assignment_submissions")
+}
+
+// ==================================================
+// LIVE CLASS SCHEDULE LAYER (Giữ nguyên)
+// ==================================================
+
+model LiveSchedule {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  liveClassId   String  @map("live_class_id") @db.Uuid
+  weekday       Int // 0-6
+  startTime     String  @map("start_time") @db.VarChar(20)
+  endTime       String  @map("end_time") @db.VarChar(20)
+  location      String? @db.VarChar(255)
+  excludedDates Json?   @map("excluded_dates") @db.JsonB
+  note          String? @db.Text
+  roomId        String? @map("room_id") @db.VarChar(64)
+
+  liveClass LiveClass             @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+  sessions  LiveScheduleSession[]
+
+  @@index([liveClassId])
+  @@map("academy_live_schedules")
+}
+
+/// Live session instance theo ngày cho từng buổi học cụ thể
+model LiveScheduleSession {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  liveClassId String  @map("live_class_id") @db.Uuid
+  scheduleId  String? @map("schedule_id") @db.Uuid
+
+  /// Ngày diễn ra buổi học (theo timezone vận hành, lưu ở UTC)
+  sessionDate DateTime @map("session_date")
+
+  /// Giờ bắt đầu/kết thúc (HH:mm, text)
+  startTime String @map("start_time") @db.VarChar(20)
+  endTime   String @map("end_time") @db.VarChar(20)
+
+  status String @default("SCHEDULED") @db.VarChar(20) // SCHEDULED, CANCELLED, RESCHEDULED, COMPLETED
+
+  cancellationReason String? @map("cancellation_reason") @db.Text
+
+  roomId       String? @map("room_id") @db.VarChar(64)
+  location     String? @db.VarChar(255)
+  note         String? @db.Text
+  instructorId String? @map("instructor_id") @db.Uuid
+
+  supersededBySessionId String? @map("superseded_by_session_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  // Relations
+  liveClass LiveClass     @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+  schedule  LiveSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  supersededBySession LiveScheduleSession?  @relation("LiveScheduleSessionSupersede", fields: [supersededBySessionId], references: [id])
+  supersededSessions  LiveScheduleSession[] @relation("LiveScheduleSessionSupersede")
+  requests            LiveScheduleRequest[]
+  attendances         ClassAttendance[]
+
+  @@unique([liveClassId, sessionDate, startTime, endTime])
+  @@index([liveClassId, sessionDate])
+  @@index([scheduleId])
+  @@index([status])
+  @@map("academy_live_schedule_sessions")
+}
+
+model LiveScheduleRequest {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId         String                    @map("session_id") @db.Uuid
+  liveClassId       String?                   @map("live_class_id") @db.Uuid
+  requestedBy       String                    @map("requested_by") @db.Uuid
+  type              LiveScheduleRequestType
+  status            LiveScheduleRequestStatus @default(PENDING)
+  reason            String?                   @db.Text
+  requestedDate     DateTime?                 @map("requested_date")
+  originalWeekday   Int                       @map("original_weekday")
+  originalStartTime String                    @map("original_start_time") @db.VarChar(20)
+  originalEndTime   String                    @map("original_end_time") @db.VarChar(20)
+  proposedDate      DateTime?                 @map("proposed_date")
+  proposedStartTime String?                   @map("proposed_start_time") @db.VarChar(20)
+  proposedEndTime   String?                   @map("proposed_end_time") @db.VarChar(20)
+  proposedTeacherId String?                   @map("proposed_teacher_id") @db.Uuid
+  reviewNote        String?                   @map("review_note") @db.Text
+  reviewedBy        String?                   @map("reviewed_by") @db.Uuid
+  reviewedAt        DateTime?                 @map("reviewed_at")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @default(now()) @updatedAt @map("updated_at")
+
+  session         LiveScheduleSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  requester       User                @relation("LiveScheduleRequestRequester", fields: [requestedBy], references: [id], onDelete: Cascade)
+  reviewer        User?               @relation("LiveScheduleRequestReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  proposedTeacher User?               @relation("LiveScheduleRequestProposedTeacher", fields: [proposedTeacherId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([requestedBy])
+  @@index([status])
+  @@index([requestedDate])
+  @@map("academy_live_schedule_requests")
+}
+
+// ==================================================
+// COMMERCE & ENROLLMENT LAYER
+// ==================================================
+
+/// Ghi danh: một VodPackage (VOD) hoặc một LiveClass (LIVE). Cohort không có cột ở đây — truy qua LiveClass.cohortId.
+model Enrollment {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  vodPackageId String? @map("vod_package_id") @db.Uuid
+  liveClassId  String? @map("live_class_id") @db.Uuid
+
+  enrolledAt    DateTime  @default(now()) @map("enrolled_at")
+  expiresAt     DateTime? @map("expires_at")
+  status        String    @default("ACTIVE") @db.VarChar(20) // ACTIVE, EXPIRED, CANCELLED
+  sourceOrderId String?   @map("source_order_id") @db.Uuid
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vodPackage VodPackage? @relation(fields: [vodPackageId], references: [id], onDelete: Cascade)
+  liveClass  LiveClass?  @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+
+  order          Order?               @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  certificate    Certificate?
+  review         CourseReview?
+  lessonProgress UserLessonProgress[]
+  academyExamAttempts AcademyExamAttempt[]
+
+  @@unique([userId, vodPackageId])
+  @@unique([userId, liveClassId])
+  @@index([userId])
+  @@index([vodPackageId])
+  @@index([liveClassId])
+  @@map("academy_enrollments")
+}
+
+// ==================================================
+// ATTENDANCE & REVIEW (Giữ nguyên)
+// ==================================================
+
+model ClassAttendance {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId  String   @map("session_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  status     String   @db.VarChar(20) // PRESENT, ABSENT, LATE, EXCUSED
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  session LiveScheduleSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+  @@map("academy_class_attendances")
+}
+
+model CourseReview {
+  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enrollmentId String @map("enrollment_id") @db.Uuid
+  userId       String @map("user_id") @db.Uuid
+
+  vodPackageId String? @map("vod_package_id") @db.Uuid
+  liveClassId  String? @map("live_class_id") @db.Uuid
+
+  rating      Int // 1-5
+  title       String?   @db.VarChar(255)
+  content     String?   @db.Text
+  status      String    @default("PUBLISHED") @db.VarChar(20) // PENDING, PUBLISHED, HIDDEN, REJECTED
+  isAnonymous Boolean   @default(false) @map("is_anonymous")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  enrollment Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vodPackage VodPackage? @relation(fields: [vodPackageId], references: [id], onDelete: Cascade)
+  liveClass  LiveClass?  @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId])
+  @@index([vodPackageId])
+  @@index([liveClassId])
+  @@index([userId])
+  @@index([status])
+  @@map("academy_course_reviews")
+}
+
+// ==================================================
+// AI SUBSCRIPTION SYSTEM
+// ==================================================
+
+model AiSubscriptionPlan {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique @db.VarChar(50) // free, plus, premium
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(12, 2)
+  quotas      Json     @default("{}") @db.JsonB // { "ai_turns": 100 }
+  features    String[] @default([])
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  orderItems        OrderItem[]
+  userSubscriptions AiUserSubscription[]
+
+  @@map("ai_subscription_plans")
+}
+
+model AiUserSubscription {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  planCode  String   @map("plan_code") @db.VarChar(50)
+  planId    String   @map("plan_id") @db.Uuid
+  startedAt DateTime @default(now()) @map("started_at")
+  expiresAt DateTime @map("expires_at")
+  status    String   @default("ACTIVE") @db.VarChar(20) // ACTIVE, EXPIRED, CANCELLED
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan AiSubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([planCode])
+  @@index([status])
+  @@map("ai_user_subscriptions")
+}
+
+model WalletTransaction {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  amount      Decimal  @db.Decimal(12, 2)
+  type        String   @db.VarChar(20) // REFUND, PURCHASE, etc.
+  referenceId String?  @map("reference_id") // ID of the Ticket or Order
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("wallet_transactions")
+}
+
+// ==================================================
+// 12.5. ACADEMY RESOURCES & FOLDERS
+// ==================================================
+
+model AcademyFolder {
+  id           String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String                 @db.VarChar(255)
+  type         AcademyFolderType      @default(LIVE_CLASS_SHARED)
+  liveClassId  String?                @map("live_class_id") @db.Uuid
+  vodPackageId String?                @map("vod_package_id") @db.Uuid
+  ownerType    AcademyFolderOwnerType @default(SYSTEM) @map("owner_type")
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @default(now()) @updatedAt @map("updated_at")
+
+  liveClass  LiveClass?        @relation(fields: [liveClassId], references: [id], onDelete: SetNull)
+  vodPackage VodPackage?       @relation(fields: [vodPackageId], references: [id], onDelete: SetNull)
+  resources  AcademyResource[]
+
+  @@index([liveClassId])
+  @@index([vodPackageId])
+  @@index([type, liveClassId])
+  @@map("academy_folders")
+}
+
+model AcademyResource {
+  id           String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  folderId     String                    @map("folder_id") @db.Uuid
+  fileAssetId  String?                   @map("file_asset_id") @db.Uuid
+  externalUrl  String?                   @map("external_url") @db.Text
+  title        String                    @db.VarChar(255)
+  description  String?                   @db.Text
+  resourceType AcademyResourceType       @map("resource_type")
+  visibility   AcademyResourceVisibility @default(ENROLLED_ONLY)
+  status       String                    @default("ACTIVE") @db.VarChar(20) // ACTIVE, ARCHIVED
+  sortOrder    Int                       @default(0) @map("sort_order")
+  createdBy    String                    @map("created_by") @db.Uuid
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @default(now()) @updatedAt @map("updated_at")
+
+  folder    AcademyFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  fileAsset FileAsset?    @relation(fields: [fileAssetId], references: [id], onDelete: SetNull)
+  creator   User          @relation("AcademyResourceCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([folderId, status, sortOrder])
+  @@index([createdAt(sort: Desc)])
+  @@map("academy_resources")
+}
+
+// ==================================================
+// 13. JLPT MOCK EXAM (ISOLATED MODULE)
+// ==================================================
+
+enum JlptLevelCode {
+  N5
+  N4
+  N3
+  N2
+  N1
+}
+
+enum JlptSectionCode {
+  LANGUAGE_VOCAB
+  LANGUAGE_GRAMMAR_READING
+  LISTENING
+}
+
+enum JlptDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum JlptQuestionType {
+  VOCAB
+  GRAMMAR
+  READING
+  LISTENING
+}
+
+enum JlptMockExamStatus {
+  DRAFT
+  READY
+  PUBLISHED
+  ARCHIVED
+}
+
+enum JlptAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  CANCELLED
+}
+
+enum JlptScoringDomain {
+  LANGUAGE
+  READING
+  LISTENING
+}
+
+model JlptLevel {
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                 JlptLevelCode @unique
+  nameVi               String?       @map("name_vi") @db.VarChar(50)
+  descriptionVi        String?       @map("description_vi") @db.Text
+  totalDurationMinutes Int           @map("total_duration_minutes")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  sections        JlptSection[]
+  scoringProfiles JlptScoringProfile[]
+  bankQuestions   JlptQuestionBankQuestion[]
+  mockTemplates   JlptMockExamTemplate[]
+
+  @@map("jlpt_levels")
+}
+
+model JlptSection {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  levelId         String          @map("level_id") @db.Uuid
+  code            JlptSectionCode
+  nameVi          String?         @map("name_vi") @db.VarChar(255)
+  nameJa          String?         @map("name_ja") @db.VarChar(255)
+  durationMinutes Int             @map("duration_minutes")
+  orderIndex      Int             @map("order_index")
+  isListening     Boolean         @default(false) @map("is_listening")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  level  JlptLevel    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  mondai JlptMondai[]
+
+  @@unique([levelId, code])
+  @@index([levelId])
+  @@index([code])
+  @@map("jlpt_sections")
+}
+
+model JlptMondai {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectionId                String   @map("section_id") @db.Uuid
+  code                     String   @db.VarChar(64) // stable code like KANJI_READING, ORTHOGRAPHY...
+  titleVi                  String?  @map("title_vi") @db.VarChar(255)
+  titleJa                  String?  @map("title_ja") @db.VarChar(255)
+  descriptionVi            String?  @map("description_vi") @db.Text
+  orderIndex               Int      @map("order_index")
+  recommendedQuestionCount Int?     @map("recommended_question_count")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @default(now()) @updatedAt @map("updated_at")
+
+  section JlptSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  bankQuestions         JlptQuestionBankQuestion[]
+  templateExamQuestions JlptMockExamTemplateQuestion[]
+
+  @@unique([sectionId, code])
+  @@index([sectionId])
+  @@index([code])
+  @@map("jlpt_mondai")
+}
+
+model JlptQuestionBankQuestion {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  levelId      String           @map("level_id") @db.Uuid
+  sectionCode  JlptSectionCode  @map("section_code")
+  mondaiId     String?          @map("mondai_id") @db.Uuid
+  questionType JlptQuestionType @map("question_type")
+
+  stemText    String         @map("stem_text") @db.Text
+  contextText String?        @map("context_text") @db.Text
+  explanation String?        @db.Text
+  difficulty  JlptDifficulty @default(EASY)
+  weight      Decimal        @default(1.0) @db.Decimal(5, 2)
+
+  audioAssetId String? @map("audio_asset_id") @db.Uuid
+  imageAssetId String? @map("image_asset_id") @db.Uuid
+
+  sourceProvider String? @map("source_provider") @db.VarChar(50)
+  sourceRef      String? @map("source_ref") @db.VarChar(255)
+  sourcePayload  Json?   @map("source_payload") @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  level   JlptLevel                @relation(fields: [levelId], references: [id], onDelete: Restrict)
+  mondai  JlptMondai?              @relation(fields: [mondaiId], references: [id], onDelete: SetNull)
+  options JlptQuestionBankOption[]
+
+  templateLinks JlptMockExamTemplateQuestion[]
+  answers       JlptMockAnswer[]
+
+  @@index([levelId])
+  @@index([sectionCode])
+  @@index([mondaiId])
+  @@index([questionType])
+  @@map("jlpt_question_bank_questions")
+}
+
+model JlptQuestionBankOption {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId String @map("question_id") @db.Uuid
+
+  key         String  @db.VarChar(4) // A/B/C/D
+  contentText String  @map("content_text") @db.Text
+  isCorrect   Boolean @default(false) @map("is_correct")
+  orderIndex  Int     @map("order_index")
+
+  question JlptQuestionBankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  selectedByAnswers JlptMockAnswer[] @relation("JlptAnswerSelectedOption")
+
+  @@unique([questionId, key])
+  @@index([questionId])
+  @@map("jlpt_question_bank_options")
+}
+
+model JlptScoringProfile {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  levelId  String  @map("level_id") @db.Uuid
+  name     String  @db.VarChar(100)
+  isActive Boolean @default(true) @map("is_active")
+
+  minLanguageScaled  Int? @map("min_language_scaled")
+  minReadingScaled   Int? @map("min_reading_scaled")
+  minListeningScaled Int? @map("min_listening_scaled")
+  minTotalScaled     Int? @map("min_total_scaled")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  level     JlptLevel              @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  mappings  JlptScoringMapping[]
+  templates JlptMockExamTemplate[]
+
+  @@index([levelId])
+  @@index([isActive])
+  @@map("jlpt_scoring_profiles")
+}
+
+model JlptScoringMapping {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId   String            @map("profile_id") @db.Uuid
+  domain      JlptScoringDomain
+  rawScore    Int               @map("raw_score")
+  scaledScore Int               @map("scaled_score")
+
+  profile JlptScoringProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, domain, rawScore])
+  @@index([profileId])
+  @@map("jlpt_scoring_mappings")
+}
+
+model JlptMockExamTemplate {
+  id               String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  levelId          String @map("level_id") @db.Uuid
+  scoringProfileId String @map("scoring_profile_id") @db.Uuid
+
+  code        String?            @db.VarChar(64)
+  title       String             @db.VarChar(255)
+  description String?            @db.Text
+  status      JlptMockExamStatus @default(DRAFT)
+
+  availableFrom      DateTime? @map("available_from")
+  availableTo        DateTime? @map("available_to")
+  maxAttemptsPerUser Int?      @map("max_attempts_per_user")
+
+  showDetailedReview           Boolean @default(true) @map("show_detailed_review")
+  showCorrectAnswerImmediately Boolean @default(false) @map("show_correct_answer_immediately")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  level          JlptLevel          @relation(fields: [levelId], references: [id], onDelete: Restrict)
+  scoringProfile JlptScoringProfile @relation(fields: [scoringProfileId], references: [id], onDelete: Restrict)
+
+  sections  JlptMockExamSection[]
+  questions JlptMockExamTemplateQuestion[]
+  attempts  JlptMockAttempt[]
+
+  @@index([levelId])
+  @@index([status])
+  @@map("jlpt_mock_exam_templates")
+}
+
+model JlptMockExamSection {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId String @map("template_id") @db.Uuid
+
+  code            JlptSectionCode
+  title           String?         @db.VarChar(255)
+  durationMinutes Int             @map("duration_minutes")
+  orderIndex      Int             @map("order_index")
+  isListening     Boolean         @default(false) @map("is_listening")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  template          JlptMockExamTemplate           @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  mondai            JlptMockExamMondai[]
+  templateQuestions JlptMockExamTemplateQuestion[]
+  attemptSections   JlptMockAttemptSection[]
+
+  @@unique([templateId, orderIndex])
+  @@index([templateId])
+  @@map("jlpt_mock_exam_sections")
+}
+
+model JlptMockExamMondai {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectionId String @map("section_id") @db.Uuid
+
+  code                     String  @db.VarChar(64)
+  titleVi                  String? @map("title_vi") @db.VarChar(255)
+  titleJa                  String? @map("title_ja") @db.VarChar(255)
+  descriptionVi            String? @map("description_vi") @db.Text
+  orderIndex               Int     @map("order_index")
+  recommendedQuestionCount Int?    @map("recommended_question_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  section JlptMockExamSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, code])
+  @@index([sectionId])
+  @@map("jlpt_mock_exam_mondai")
+}
+
+model JlptMockExamTemplateQuestion {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId String  @map("template_id") @db.Uuid
+  sectionId  String  @map("section_id") @db.Uuid
+  mondaiId   String? @map("mondai_id") @db.Uuid
+  questionId String  @map("question_id") @db.Uuid
+
+  orderIndex Int      @map("order_index")
+  weight     Decimal? @db.Decimal(5, 2)
+
+  template JlptMockExamTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  section  JlptMockExamSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  mondai   JlptMondai?              @relation(fields: [mondaiId], references: [id], onDelete: SetNull)
+  question JlptQuestionBankQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  answers JlptMockAnswer[]
+
+  @@unique([templateId, orderIndex])
+  @@index([templateId])
+  @@index([sectionId])
+  @@index([mondaiId])
+  @@index([questionId])
+  @@map("jlpt_mock_exam_template_questions")
+}
+
+model JlptMockAttempt {
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String            @map("user_id") @db.Uuid
+  templateId String            @map("template_id") @db.Uuid
+  levelCode  JlptLevelCode     @map("level_code")
+  status     JlptAttemptStatus @default(IN_PROGRESS)
+
+  startedAt   DateTime  @default(now()) @map("started_at")
+  submittedAt DateTime? @map("submitted_at")
+
+  // Scores
+  languageScoreRaw  Decimal? @map("language_score_raw") @db.Decimal(6, 2)
+  readingScoreRaw   Decimal? @map("reading_score_raw") @db.Decimal(6, 2)
+  listeningScoreRaw Decimal? @map("listening_score_raw") @db.Decimal(6, 2)
+
+  languageScoreScaled  Int? @map("language_score_scaled")
+  readingScoreScaled   Int? @map("reading_score_scaled")
+  listeningScoreScaled Int? @map("listening_score_scaled")
+  totalScoreScaled     Int? @map("total_score_scaled")
+
+  passMock Boolean? @map("pass_mock")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user     User                     @relation("JlptMockAttemptUser", fields: [userId], references: [id], onDelete: Cascade)
+  template JlptMockExamTemplate     @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  sections JlptMockAttemptSection[]
+  answers  JlptMockAnswer[]
+
+  @@index([userId])
+  @@index([templateId])
+  @@index([status])
+  @@map("jlpt_mock_attempts")
+}
+
+model JlptMockAttemptSection {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId String @map("attempt_id") @db.Uuid
+  sectionId String @map("section_id") @db.Uuid
+
+  orderIndex Int    @map("order_index")
+  status     String @default("LOCKED") @db.VarChar(20) // LOCKED | ACTIVE | FINISHED
+
+  startedAt DateTime? @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+
+  // Server-calculated end time for countdown
+  endsAt DateTime? @map("ends_at")
+
+  attempt JlptMockAttempt     @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  section JlptMockExamSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, orderIndex])
+  @@index([attemptId])
+  @@index([sectionId])
+  @@map("jlpt_mock_attempt_sections")
+}
+
+model JlptMockAnswer {
+  id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId          String  @map("attempt_id") @db.Uuid
+  templateQuestionId String  @map("template_question_id") @db.Uuid
+  questionId         String  @map("question_id") @db.Uuid
+  selectedOptionId   String? @map("selected_option_id") @db.Uuid
+
+  answeredAt   DateTime @default(now()) @map("answered_at")
+  isCorrect    Boolean? @map("is_correct")
+  scoreAwarded Decimal? @map("score_awarded") @db.Decimal(5, 2)
+
+  attempt          JlptMockAttempt              @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  templateQuestion JlptMockExamTemplateQuestion @relation(fields: [templateQuestionId], references: [id], onDelete: Cascade)
+  question         JlptQuestionBankQuestion     @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOption   JlptQuestionBankOption?      @relation("JlptAnswerSelectedOption", fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, templateQuestionId])
+  @@index([attemptId])
+  @@index([questionId])
+  @@map("jlpt_mock_answers")
+}
+
+// ==================================================
+// 14. ACADEMY FIXED QUIZ SYSTEM (NEW)
+// ==================================================
+
+model AcademyExam {
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseProfileId       String?           @map("course_profile_id") @db.Uuid
+  title                 String            @db.VarChar(255)
+  description           String?           @db.Text
+  examType              AcademyExamType   @map("exam_type")
+  level                 String?           @db.VarChar(50)
+  totalTimeLimitMinutes Int?              @map("total_time_limit_minutes")
+  status                AcademyExamStatus @default(DRAFT)
+  settings              Json?             @default("{}") @db.JsonB
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  courseProfile            CourseProfile?                   @relation(fields: [courseProfileId], references: [id], onDelete: SetNull)
+  sections                 AcademyExamSection[]
+  questions                AcademyExamQuestion[]
+  attempts                 AcademyExamAttempt[]
+  courseProfileAssessments AcademyCourseProfileAssessment[]
+
+  @@index([courseProfileId])
+  @@index([status])
+  @@map("academy_exams")
+}
+
+model AcademyExamSection {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  examId            String   @map("exam_id") @db.Uuid
+  title             String   @db.VarChar(255)
+  instruction       String?  @db.Text
+  sectionType       String?  @map("section_type") @db.VarChar(50)
+  timeLimitSeconds  Int?     @map("time_limit_seconds")
+  orderIndex        Int      @map("order_index")
+  metadata          Json?    @default("{}") @db.JsonB
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+
+  exam      AcademyExam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questions AcademyExamQuestion[]
+
+  @@index([examId])
+  @@map("academy_exam_sections")
+}
+
+model AcademyQuestion {
+  id           String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionType AcademyQuestionType         @map("question_type")
+  stem         String                      @db.Text
+  explanation  String?                     @db.Text
+  level        String?                     @db.VarChar(10)
+  categoryType AcademyQuestionCategoryType? @map("category_type")
+  reviewStatus AcademyQuestionReviewStatus @default(DRAFT) @map("review_status")
+  reviewedBy   String?                     @map("reviewed_by") @db.Uuid
+  reviewedAt   DateTime?                   @map("reviewed_at")
+  reviewNote   String?                     @map("review_note") @db.Text
+  parentId     String?                     @map("parent_id") @db.Uuid
+  mediaUrl     String?                     @map("media_url") @db.Text
+  correctAnswer String?                    @map("correct_answer") @db.Text
+  createdAt    DateTime                    @default(now()) @map("created_at")
+  updatedAt    DateTime                    @default(now()) @updatedAt @map("updated_at")
+
+  options        AcademyQuestionOption[]
+  examQuestions  AcademyExamQuestion[]
+  attemptAnswers AcademyExamAttemptAnswer[]
+  
+  parent         AcademyQuestion?            @relation("QuestionHierarchy", fields: [parentId], references: [id])
+  children       AcademyQuestion[]           @relation("QuestionHierarchy")
+
+  @@index([questionType])
+  @@index([categoryType])
+  @@map("academy_questions")
+}
+
+model AcademyQuestionOption {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  optionKey  String   @map("option_key") @db.VarChar(10) // A, B, C, D...
+  content    String   @db.Text
+  isCorrect  Boolean  @default(false) @map("is_correct")
+  orderIndex Int      @map("order_index")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  question       AcademyQuestion            @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attemptAnswers AcademyExamAttemptAnswer[]
+
+  @@index([questionId])
+  @@map("academy_question_options")
+}
+
+model AcademyExamQuestion {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  examId     String   @map("exam_id") @db.Uuid
+  sectionId  String   @map("section_id") @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  orderIndex Int      @map("order_index")
+  points     Decimal? @db.Decimal(5, 2)
+  metadata   Json?    @default("{}") @db.JsonB
+
+  exam     AcademyExam        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  section  AcademyExamSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  question AcademyQuestion    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  attemptAnswers AcademyExamAttemptAnswer[]
+
+  @@unique([examId, orderIndex])
+  @@index([examId])
+  @@index([sectionId])
+  @@map("academy_exam_questions")
+}
+
+model AcademyExamAttempt {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  examId         String               @map("exam_id") @db.Uuid
+  userId         String               @map("user_id") @db.Uuid
+  /// Phạm vi delivery (LIVE/VOD): mỗi enrollment một dòng — không gộp quiz giữa các khóa cùng course profile.
+  enrollmentId   String?              @map("enrollment_id") @db.Uuid
+  status         AcademyAttemptStatus @default(IN_PROGRESS)
+  score          Decimal?             @db.Decimal(6, 2)
+  maxScore       Decimal?             @map("max_score") @db.Decimal(6, 2)
+  percentage     Decimal?             @db.Decimal(5, 2)
+  isPassed       Boolean?             @map("is_passed")
+  startedAt      DateTime             @default(now()) @map("started_at")
+  submittedAt    DateTime?            @map("submitted_at")
+  completedAt    DateTime?            @map("completed_at")
+  draftAnswers   Json?                @map("draft_answers") @db.JsonB
+  resultMetadata Json?                @map("result_metadata") @db.JsonB
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @default(now()) @updatedAt @map("updated_at")
+
+  exam       AcademyExam @relation(fields: [examId], references: [id], onDelete: Restrict)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollment Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+
+  answers AcademyExamAttemptAnswer[]
+
+  @@index([examId, userId, startedAt(sort: Desc)])
+  @@index([userId])
+  @@index([enrollmentId, examId])
+  @@map("academy_exam_attempts")
+}
+
+model AcademyExamAttemptAnswer {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId        String   @map("attempt_id") @db.Uuid
+  examQuestionId   String   @map("exam_question_id") @db.Uuid
+  questionId       String   @map("question_id") @db.Uuid
+  selectedOptionId String?  @map("selected_option_id") @db.Uuid
+  answerPayload    Json?    @map("answer_payload") @db.JsonB
+  isCorrect        Boolean? @map("is_correct")
+  scoreAwarded     Decimal? @map("score_awarded") @db.Decimal(5, 2)
+  answeredAt       DateTime @default(now()) @map("answered_at")
+
+  attempt         AcademyExamAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  examQuestion    AcademyExamQuestion @relation(fields: [examQuestionId], references: [id], onDelete: Cascade)
+  question        AcademyQuestion     @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOption  AcademyQuestionOption? @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, examQuestionId])
+  @@index([attemptId])
+  @@map("academy_exam_attempt_answers")
+}
+
+model AcademyCourseProfileAssessment {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseProfileId String                @map("course_profile_id") @db.Uuid
+  examId          String                @map("exam_id") @db.Uuid
+  assessmentKind  AcademyAssessmentKind @map("assessment_kind")
+  moduleId        String?               @map("module_id") @db.Uuid
+  triggerLessonId String?               @map("trigger_lesson_id") @db.Uuid
+  orderIndex      Int                   @map("order_index")
+  isRequired      Boolean               @default(true) @map("is_required")
+  isActive        Boolean               @default(true) @map("is_active")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @default(now()) @updatedAt @map("updated_at")
+
+  courseProfile CourseProfile @relation(fields: [courseProfileId], references: [id], onDelete: Cascade)
+  exam          AcademyExam   @relation(fields: [examId], references: [id], onDelete: Restrict)
+  module        Module?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  triggerLesson Lesson?       @relation(fields: [triggerLessonId], references: [id], onDelete: SetNull)
+
+  @@unique([courseProfileId, assessmentKind, triggerLessonId], map: "idx_assessment_lesson_unique")
+  @@unique([courseProfileId, assessmentKind, moduleId], map: "idx_assessment_module_unique")
+  @@index([courseProfileId, isActive, orderIndex])
+  @@map("academy_course_profile_assessments")
+}
+
+/// LessonTranscriptChunk lưu kịch bản video theo mốc thời gian
+model LessonTranscriptChunk {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId  String @map("lesson_id") @db.Uuid
+  startTime Int    @map("start_time")
+  endTime   Int    @map("end_time")
+  content   String @db.Text
+  lesson    Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@map("academy_lesson_transcript_chunks")
+}

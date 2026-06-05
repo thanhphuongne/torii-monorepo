@@ -1,0 +1,231 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { VideoQuality } from 'livekit-client';
+import { Theme } from '@excalidraw/excalidraw/element/types';
+
+import {
+  ColumnCameraPosition,
+  ColumnCameraWidth,
+  IMediaDevice,
+  InitiatePrivateChat,
+  IRoomSettings,
+  UnreadMsgFromPayload,
+  UserNotification,
+  VideoObjectFit,
+} from '@/store/slices/interfaces/room-settings';
+import { DB_STORE_NAMES, idbStore } from '@/helpers/libs/idb';
+
+const initialState: IRoomSettings = {
+  isShowRoomSettingsModal: false,
+  isNatsServerConnected: false,
+
+  audioDevices: [],
+  videoDevices: [],
+  selectedAudioDevice: '',
+  selectedVideoDevice: '',
+  playAudioNotification: false,
+  activateWebcamsView: true,
+  activeScreenSharingView: true,
+  allowPlayAudioNotification: true,
+  roomAudioVolume: 1,
+  roomScreenShareAudioVolume: 1,
+  roomVideoQuality: VideoQuality.HIGH,
+  theme: 'light',
+  videoObjectFit: VideoObjectFit.CONTAIN,
+
+  selectedTabLeftPanel: 0,
+  selectedChatOption: 'public',
+  initiatePrivateChat: {
+    name: '',
+    userId: '',
+  },
+  unreadMsgFrom: [],
+  selectedChatTransLang: '',
+
+  columnCameraWidth: ColumnCameraWidth.FULL_WIDTH,
+  columnCameraPosition: ColumnCameraPosition.LEFT,
+  visibleHeader: true,
+  visibleFooter: true,
+  isWAJLCWindowTabVisible: true,
+  focusActiveSpeakerWebcam: true,
+  userNotifications: [],
+  isSidePanelOpened: false,
+  hasWebcamPages: false,
+};
+
+const roomSettingsSlice = createSlice({
+  name: 'room-settings',
+  initialState,
+  reducers: {
+    updateShowRoomSettingsModal: (state, action: PayloadAction<boolean>) => {
+      state.isShowRoomSettingsModal = action.payload;
+    },
+    updateIsNatsServerConnected: (state, action: PayloadAction<boolean>) => {
+      state.isNatsServerConnected = action.payload;
+    },
+    addAudioDevices: (state, action: PayloadAction<Array<IMediaDevice>>) => {
+      state.audioDevices = action.payload;
+    },
+    addVideoDevices: (state, action: PayloadAction<Array<IMediaDevice>>) => {
+      state.videoDevices = action.payload;
+    },
+    updateSelectedAudioDevice: (state, action: PayloadAction<string>) => {
+      state.selectedAudioDevice = action.payload;
+    },
+    updateSelectedVideoDevice: (state, action: PayloadAction<string>) => {
+      state.selectedVideoDevice = action.payload;
+    },
+    updatePlayAudioNotification: (state, action: PayloadAction<boolean>) => {
+      state.playAudioNotification = action.payload;
+    },
+    updateActivateWebcamsView: (state, action: PayloadAction<boolean>) => {
+      state.activateWebcamsView = action.payload;
+    },
+    updateActiveScreenSharingView: (state, action: PayloadAction<boolean>) => {
+      state.activeScreenSharingView = action.payload;
+    },
+    updateAllowPlayAudioNotification: (
+        state,
+        action: PayloadAction<boolean>,
+    ) => {
+      state.allowPlayAudioNotification = action.payload;
+    },
+    updateRoomAudioVolume: (state, action: PayloadAction<number>) => {
+      state.roomAudioVolume = action.payload;
+    },
+    updateRoomScreenShareAudioVolume: (
+        state,
+        action: PayloadAction<number>,
+    ) => {
+      state.roomScreenShareAudioVolume = action.payload;
+    },
+    updateRoomVideoQuality: (state, action: PayloadAction<VideoQuality>) => {
+      state.roomVideoQuality = action.payload;
+    },
+    updateTheme: (state, action: PayloadAction<string>) => {
+      state.theme = action.payload as Theme;
+    },
+    updateVideoObjectFit: (state, action: PayloadAction<VideoObjectFit>) => {
+      state.videoObjectFit = action.payload;
+    },
+    updateSelectedTabLeftPanel: (state, action: PayloadAction<number>) => {
+      state.selectedTabLeftPanel = action.payload;
+    },
+    updateSelectedChatOption: (state, action: PayloadAction<string>) => {
+      state.selectedChatOption = action.payload;
+    },
+    updateInitiatePrivateChat: (
+        state,
+        action: PayloadAction<InitiatePrivateChat>,
+    ) => {
+      state.initiatePrivateChat = action.payload;
+    },
+    updateUnreadMsgFrom: (
+        state,
+        action: PayloadAction<UnreadMsgFromPayload>,
+    ) => {
+      const tmp = [...state.unreadMsgFrom];
+      if (action.payload.task === 'ADD') {
+        const exist = tmp.filter((id) => id === action.payload.id);
+        if (!exist.length) {
+          tmp.push(action.payload.id);
+          state.unreadMsgFrom = tmp;
+        }
+      } else if (action.payload.task === 'DEL') {
+        state.unreadMsgFrom = tmp.filter((id) => id !== action.payload.id);
+      }
+    },
+    updateColumnCameraWidth: (
+        state,
+        action: PayloadAction<ColumnCameraWidth>,
+    ) => {
+      state.columnCameraWidth = action.payload;
+    },
+    updateColumnCameraPosition: (
+        state,
+        action: PayloadAction<ColumnCameraPosition>,
+    ) => {
+      state.columnCameraPosition = action.payload;
+    },
+    toggleHeaderVisibility: (state) => {
+      state.visibleHeader = !state.visibleHeader;
+    },
+    toggleFooterVisibility: (state) => {
+      state.visibleFooter = !state.visibleFooter;
+    },
+    updateIsWAJLCWindowTabVisible: (state, action: PayloadAction<boolean>) => {
+      state.isWAJLCWindowTabVisible = action.payload;
+    },
+    updatePinCamUserId: (state, action: PayloadAction<string | undefined>) => {
+      state.pinCamUserId = action.payload;
+    },
+    updateFocusActiveSpeakerWebcam: (state, action: PayloadAction<boolean>) => {
+      state.focusActiveSpeakerWebcam = action.payload;
+    },
+    addUserNotification: (state, action: PayloadAction<UserNotification>) => {
+      if (!action.payload.created) {
+        action.payload.created = Date.now();
+      }
+      state.userNotifications.push(action.payload);
+      idbStore(
+          DB_STORE_NAMES.USER_NOTIFICATIONS,
+          action.payload.created.toString(),
+          action.payload,
+      ).then();
+    },
+    setAllUserNotifications: (
+        state,
+        action: PayloadAction<UserNotification[]>,
+    ) => {
+      state.userNotifications = action.payload;
+    },
+    updateIsSidePanelOpened: (state, action: PayloadAction<boolean>) => {
+      state.isSidePanelOpened = action.payload;
+    },
+    updateSelectedChatTransLang: (state, action: PayloadAction<string>) => {
+      state.selectedChatTransLang = action.payload;
+    },
+    updateHasWebcamPages: (state, action: PayloadAction<boolean>) => {
+      state.hasWebcamPages = action.payload;
+    },
+    updateMaxNumDisplayWebcams: (state, action: PayloadAction<number>) => {
+      state.maxNumDisplayWebcams = action.payload;
+    },
+  },
+});
+
+export const {
+  addAudioDevices,
+  addVideoDevices,
+  updateSelectedAudioDevice,
+  updateSelectedVideoDevice,
+  updatePlayAudioNotification,
+  updateShowRoomSettingsModal,
+  updateActivateWebcamsView,
+  updateActiveScreenSharingView,
+  updateAllowPlayAudioNotification,
+  updateRoomAudioVolume,
+  updateRoomScreenShareAudioVolume,
+  updateRoomVideoQuality,
+  updateTheme,
+  updateVideoObjectFit,
+  updateSelectedTabLeftPanel,
+  updateSelectedChatOption,
+  updateInitiatePrivateChat,
+  updateUnreadMsgFrom,
+  updateColumnCameraWidth,
+  updateColumnCameraPosition,
+  toggleHeaderVisibility,
+  toggleFooterVisibility,
+  updateIsNatsServerConnected,
+  updateIsWAJLCWindowTabVisible,
+  updatePinCamUserId,
+  updateFocusActiveSpeakerWebcam,
+  addUserNotification,
+  setAllUserNotifications,
+  updateIsSidePanelOpened,
+  updateSelectedChatTransLang,
+  updateHasWebcamPages,
+  updateMaxNumDisplayWebcams,
+} = roomSettingsSlice.actions;
+
+export default roomSettingsSlice.reducer;

@@ -1,0 +1,25 @@
+{
+    "name": "@workspace/schemas",
+    "version": "0.0.1",
+    "type": "commonjs",
+    "main": "dist/index.js",
+    "module": "dist/esm/index.js",
+    "exports": {
+        ".": {
+            "require": "./dist/index.js",
+            "import": "./dist/esm/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc && tsc -p tsconfig.esm.json && node -e \"require('fs').writeFileSync('./dist/esm/package.json', '{\\\"type\\\": \\\"module\\\"}')\"",
+        "dev": "tsc --watch"
+    },
+    "dependencies": {
+        "zod": "^3.25.76"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.0"
+    }
+}

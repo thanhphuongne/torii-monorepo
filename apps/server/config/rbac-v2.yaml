@@ -1,0 +1,280 @@
+system:
+  version: "4.0.0-draft"
+  description: "RBAC v2 cho LMS - tách rõ bounded context, action và scope"
+
+principles:
+  - "Permission theo bounded context, không trộn nghiệp vụ."
+  - "Action tách rõ: read/create/update/delete/publish/approve/grade/manage."
+  - "Lecturer chỉ thao tác trong phạm vi lớp được assign (ownership check ở service/controller)."
+  - "Staff-academic quản trị học thuật toàn cục, tách biệt khỏi vận hành."
+
+permissions:
+  # =========================
+  # LMS Catalog (Học liệu)
+  # =========================
+  - code: lms.catalog.read
+    category: LMS Catalog
+    description: "Xem course profile/module/lesson và metadata học liệu"
+  - code: lms.catalog.create
+    category: LMS Catalog
+    description: "Tạo mới course profile/module/lesson"
+  - code: lms.catalog.update
+    category: LMS Catalog
+    description: "Chỉnh sửa course profile/module/lesson"
+  - code: lms.catalog.delete
+    category: LMS Catalog
+    description: "Xóa course profile/module/lesson"
+  - code: lms.catalog.publish
+    category: LMS Catalog
+    description: "Xuất bản nội dung học liệu"
+  - code: lms.catalog.submit
+    category: LMS Catalog
+    description: "Gửi duyệt (submit for approval) nội dung học liệu"
+  - code: lms.catalog.approve
+    category: LMS Catalog
+    description: "Duyệt/từ chối yêu cầu xuất bản học liệu"
+
+  # =========================
+  # LMS Delivery (Lớp live)
+  # =========================
+  - code: lms.delivery.read
+    category: LMS Delivery
+    description: "Xem lớp live/schedule/session/attendance"
+  - code: lms.delivery.create
+    category: LMS Delivery
+    description: "Tạo lớp live/schedule/session"
+  - code: lms.delivery.update
+    category: LMS Delivery
+    description: "Cập nhật lớp live/schedule/session"
+  - code: lms.delivery.delete
+    category: LMS Delivery
+    description: "Xóa lớp live/schedule/session"
+  - code: lms.delivery.manage
+    category: LMS Delivery
+    description: "Quản lý vận hành lớp (start/end room, xử lý dời lịch)"
+  - code: lms.delivery.request.create
+    category: LMS Delivery
+    description: "Tạo yêu cầu dời lịch (schedule change request) cho buổi học"
+  - code: lms.delivery.request.read
+    category: LMS Delivery
+    description: "Xem danh sách/chi tiết yêu cầu dời lịch"
+  - code: lms.delivery.request.cancel
+    category: LMS Delivery
+    description: "Hủy yêu cầu dời lịch (chỉ khi PENDING và đúng người tạo)"
+  - code: lms.delivery.attendance.manage
+    category: LMS Delivery
+    description: "Điểm danh học viên"
+  - code: lms.delivery.approve
+    category: LMS Delivery
+    description: "Duyệt yêu cầu dời lịch/nghiệp vụ delivery"
+
+  # =========================
+  # LMS Assessment
+  # =========================
+  - code: lms.assessment.read
+    category: LMS Assessment
+    description: "Xem exam/question bank/submission"
+  - code: lms.assessment.create
+    category: LMS Assessment
+    description: "Tạo exam/question"
+  - code: lms.assessment.update
+    category: LMS Assessment
+    description: "Cập nhật exam/question"
+  - code: lms.assessment.delete
+    category: LMS Assessment
+    description: "Xóa exam/question"
+  - code: lms.assessment.publish
+    category: LMS Assessment
+    description: "Xuất bản đề thi/đợt thi"
+  - code: lms.assessment.grade
+    category: LMS Assessment
+    description: "Chấm bài/submission"
+
+  # =========================
+  # LMS Approval Hub
+  # =========================
+  - code: lms.approval.read
+    category: LMS Approval
+    description: "Xem trung tâm phê duyệt học thuật"
+  - code: lms.approval.manage
+    category: LMS Approval
+    description: "Xử lý duyệt/từ chối các yêu cầu học thuật"
+
+  # =========================
+  # LMS Commerce (Offerings)
+  # =========================
+  - code: lms.commerce.read
+    category: LMS Commerce
+    description: "Xem cohort/VOD offering và pricing"
+  - code: lms.commerce.create
+    category: LMS Commerce
+    description: "Tạo offering (cohort/VOD)"
+  - code: lms.commerce.update
+    category: LMS Commerce
+    description: "Cập nhật offering/pricing"
+  - code: lms.commerce.delete
+    category: LMS Commerce
+    description: "Xóa offering"
+  - code: lms.commerce.publish
+    category: LMS Commerce
+    description: "Xuất bản offering"
+  - code: lms.commerce.submit
+    category: LMS Commerce
+    description: "Gửi duyệt (submit for approval) cohort/VOD offering"
+  - code: lms.commerce.approve
+    category: LMS Commerce
+    description: "Duyệt/từ chối publish offering"
+
+  # =========================
+  # Operations (non-academic)
+  # =========================
+  - code: ops.order.manage
+    category: Operations Commerce
+    description: "Quản lý đơn hàng/doanh thu"
+  - code: ops.coupon.manage
+    category: Operations Commerce
+    description: "Quản lý coupon"
+  - code: ops.subscription.manage
+    category: Operations Commerce
+    description: "Quản lý gói AI subscription"
+  - code: ops.support.view
+    category: Operations Support
+    description: "Xem ticket hỗ trợ"
+  - code: ops.support.handle
+    category: Operations Support
+    description: "Xử lý ticket hỗ trợ"
+  - code: ops.blog.manage
+    category: Operations Content
+    description: "Quản trị blog"
+  - code: ops.gamification.manage
+    category: Operations Gamification
+    description: "Quản trị gamification"
+  - code: ops.audit.view
+    category: Operations System
+    description: "Xem audit logs"
+  - code: ops.report.view
+    category: Operations System
+    description: "Xem báo cáo"
+  - code: ops.user.view
+    category: Operations Identity
+    description: "Xem danh sách user"
+  - code: ops.user.manage
+    category: Operations Identity
+    description: "Quản trị user/role assignment"
+
+role_matrix:
+  admin:
+    - lms.catalog.read
+    - lms.catalog.create
+    - lms.catalog.update
+    - lms.catalog.delete
+    - lms.catalog.publish
+    - lms.catalog.submit
+    - lms.catalog.approve
+    - lms.delivery.read
+    - lms.delivery.create
+    - lms.delivery.update
+    - lms.delivery.delete
+    - lms.delivery.manage
+    - lms.delivery.request.create
+    - lms.delivery.request.read
+    - lms.delivery.request.cancel
+    - lms.delivery.attendance.manage
+    - lms.delivery.approve
+    - lms.assessment.read
+    - lms.assessment.create
+    - lms.assessment.update
+    - lms.assessment.delete
+    - lms.assessment.publish
+    - lms.assessment.grade
+    - lms.approval.read
+    - lms.approval.manage
+    - lms.commerce.read
+    - lms.commerce.create
+    - lms.commerce.update
+    - lms.commerce.delete
+    - lms.commerce.publish
+    - lms.commerce.submit
+    - lms.commerce.approve
+    - ops.order.manage
+    - ops.coupon.manage
+    - ops.subscription.manage
+    - ops.support.view
+    - ops.support.handle
+    - ops.blog.manage
+    - ops.gamification.manage
+    - ops.audit.view
+    - ops.report.view
+    - ops.user.view
+    - ops.user.manage
+
+  staff-academic:
+    - lms.catalog.read
+    - lms.catalog.create
+    - lms.catalog.update
+    - lms.catalog.delete
+    - lms.catalog.publish
+    - lms.catalog.submit
+    - lms.delivery.read
+    - lms.delivery.create
+    - lms.delivery.update
+    - lms.delivery.delete
+    - lms.delivery.manage
+    - lms.delivery.request.create
+    - lms.delivery.request.read
+    - lms.delivery.request.cancel
+    - lms.delivery.attendance.manage
+    - lms.delivery.approve
+    - lms.assessment.read
+    - lms.assessment.create
+    - lms.assessment.update
+    - lms.assessment.delete
+    - lms.assessment.publish
+    - lms.assessment.grade
+    - lms.approval.read
+    - lms.commerce.read
+    - lms.commerce.create
+    - lms.commerce.update
+    - lms.commerce.delete
+    - lms.commerce.publish
+    - lms.commerce.submit
+    - ops.report.view
+    - ops.user.view
+
+  staff-operations:
+    - lms.catalog.read
+    - lms.delivery.read
+    - lms.commerce.read
+    - lms.approval.read
+    - ops.order.manage
+    - ops.coupon.manage
+    - ops.subscription.manage
+    - ops.support.view
+    - ops.support.handle
+    - ops.blog.manage
+    - ops.gamification.manage
+    - ops.audit.view
+    - ops.report.view
+    - ops.user.view
+
+  lecturer:
+    # Chỉ dạy lớp được assign (bắt buộc check ownership trong service/controller)
+    - lms.delivery.read
+    - lms.delivery.update
+    - lms.delivery.manage
+    - lms.delivery.request.create
+    - lms.delivery.request.read
+    - lms.delivery.request.cancel
+    - lms.delivery.attendance.manage
+    - lms.assessment.read
+    - lms.assessment.grade
+
+  learner:
+    - lms.catalog.read
+    - lms.delivery.read
+    - lms.assessment.read
+
+notes:
+  - "File này là target model cho Task 3+ (migration dữ liệu và refactor controller guards)."
+  - "Task 1 + Task 2 hoàn tất khi model + matrix được chốt và sign-off."
+  - "Không bật runtime trực tiếp trước khi hoàn thành migration mapping old->new permissions."

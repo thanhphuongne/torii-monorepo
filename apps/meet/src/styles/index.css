@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import "@workspace/ui/globals.css";
+
+
+:root {
+  /* Match `web-learner` font variables */
+  --font-sans: "Montserrat", sans-serif;
+  --font-heading: "Nunito", sans-serif;
+  --font-serif: "Noto Serif JP", serif;
+  --font-jp: "Noto Sans JP", sans-serif;
+  --font-space: "Space Grotesk", sans-serif;
+  --ui-font: var(--font-sans);
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.64 0.14 255);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.58 0.22 27);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.64 0.14 255);
+  --chart-1: oklch(0.64 0.14 255);
+  --chart-2: oklch(0.7 0.12 255);
+  --chart-3: oklch(0.76 0.1 255);
+  --chart-4: oklch(0.58 0.16 255);
+  --chart-5: oklch(0.5 0.18 255);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.64 0.14 255);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.7 0.04 255);
+
+  /* Landing / pre-join: preview luôn là nền tối (không phụ thuộc theme sáng) */
+  --landing-preview-bg: oklch(0.32 0.01 260);
+  --landing-preview-fg: oklch(0.98 0 0.01);
+  --landing-preview-muted: oklch(0.92 0 0.01);
+  --landing-preview-ring: oklch(0 0 0 / 0.08);
+  /* Nút tròn mic/cam trên vùng preview tối */
+  --landing-preview-control-bg: oklch(0.99 0 0);
+  --landing-preview-control-fg: oklch(0.22 0.01 260);
+
+  /* Footer thanh điều khiển (kiểu Meet) */
+  --meet-footer-bg: oklch(0.97 0.005 260);
+  --meet-footer-fg: oklch(0.22 0.02 260);
+  --meet-footer-border: oklch(0.88 0.01 260);
+  --meet-footer-control-bg: oklch(0.91 0.01 260);
+  --meet-footer-control-hover: oklch(0.84 0.01 260);
+  --meet-footer-meta-muted: oklch(0.48 0.02 260);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.64 0.14 255);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.371 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.64 0.14 255);
+  --chart-1: oklch(0.64 0.14 255);
+  --chart-2: oklch(0.7 0.12 255);
+  --chart-3: oklch(0.76 0.1 255);
+  --chart-4: oklch(0.58 0.16 255);
+  --chart-5: oklch(0.5 0.18 255);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.64 0.14 255);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.7 0.04 255);
+
+  --landing-preview-bg: oklch(0.24 0.01 260);
+  --landing-preview-fg: oklch(0.98 0 0.01);
+  --landing-preview-muted: oklch(0.78 0.01 260);
+  --landing-preview-ring: oklch(1 0 0 / 0.12);
+  --landing-preview-control-bg: oklch(0.96 0 0);
+  --landing-preview-control-fg: oklch(0.2 0.02 260);
+
+  --meet-footer-bg: oklch(0.17 0.01 260);
+  --meet-footer-fg: oklch(0.98 0 0);
+  --meet-footer-border: oklch(1 0 0 / 0.1);
+  --meet-footer-control-bg: oklch(0.3 0.015 260);
+  --meet-footer-control-hover: oklch(0.38 0.02 260);
+  --meet-footer-meta-muted: oklch(0.68 0.02 260);
+}
+
+
+@import './common.css' layer(utilities);
+@import './keyframes-animation.css' layer(utilities);
+@import './common.css' layer(utilities);
+@import './keyframes-animation.css' layer(utilities);
+
+.custom-range-container {
+  width: 100%;
+  user-select: none;
+}
+
+.custom-range-track {
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.custom-range-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 10px 0 0 10px;
+  pointer-events: none;
+}
+
+.custom-range-thumb {
+  position: absolute;
+  top: 50%;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.1s ease;
+  z-index: 2;
+}
+
+.custom-range-value {
+  margin-top: 10px;
+  text-align: center;
+  font-family: var(--ui-font, "Montserrat", sans-serif);
+  font-size: 16px;
+  color: #333;
+}
+
+/* Footer chính: Google Meet–style (nền + nút tròn), dùng biến --meet-footer-* */
+#main-footer.meet-footer-bar {
+  background: var(--meet-footer-bg);
+  color: var(--meet-footer-fg);
+  border-top-color: var(--meet-footer-border);
+}
+
+/* Mic + cam (meet-footer-ctrl-pill): viền trạng thái + bo pill; không ép border trong suốt như icon tròn thường */
+#main-footer.meet-footer-bar .footer-icon:not(.meet-footer-ctrl-pill),
+#main-footer.meet-footer-bar .footer-menu .footer-icon {
+  border-color: transparent !important;
+  border-radius: 9999px !important;
+}
+
+#main-footer.meet-footer-bar .footer-icon[class*="border-primary"] .footer-icon-bg {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 45%, transparent);
+}
+
+#main-footer.meet-footer-bar .footer-icon-bg,
+#main-footer.meet-footer-bar .microphone-wrap.footer-icon-bg,
+#main-footer.meet-footer-bar .footer-menu .footer-icon-bg {
+  background: var(--meet-footer-control-bg) !important;
+  border-color: transparent !important;
+  color: var(--meet-footer-fg) !important;
+  box-shadow: none !important;
+  border-radius: 9999px !important;
+}
+
+#main-footer.meet-footer-bar .footer-icon-bg:hover,
+#main-footer.meet-footer-bar .microphone-wrap.footer-icon-bg:hover,
+#main-footer.meet-footer-bar .footer-menu .footer-icon-bg:hover {
+  background: var(--meet-footer-control-hover) !important;
+}
+
+#main-footer.meet-footer-bar .footer-icon-bg.bg-muted {
+  background: color-mix(in oklab, var(--primary) 28%, var(--meet-footer-control-bg)) !important;
+}
+
+#main-footer.meet-footer-bar .meet-footer-end-call button {
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--destructive) 35%, transparent);
+}
+
+#main-footer.meet-footer-bar .meet-footer-end-call button:hover {
+  filter: brightness(1.05);
+}
+
+/* Tooltip / micro-tooltip không bị che bởi footer hoặc stacking thấp */
+#main-footer.meet-footer-bar .has-tooltip:hover .tooltip,
+#main-footer.meet-footer-bar .has-tooltip:focus-visible .tooltip {
+  z-index: 9999 !important;
+}
+
+#main-footer.meet-footer-bar .micro-muted-tooltip {
+  z-index: 9999 !important;
+}
+
+/* Menu mic / webcam (Headless) nổi trên nội dung phòng */
+#main-footer.meet-footer-bar .menu [class*="MenuItems"],
+#main-footer.meet-footer-bar .menu.origin-bottom-left {
+  z-index: 10000 !important;
+}
+
+#main-footer.meet-footer-bar,
+#main-footer.meet-footer-bar .footer-inner,
+#main-footer.meet-footer-bar .footer-middle,
+#main-footer.meet-footer-bar .meet-footer-actions {
+  overflow: visible !important;
+}
+
+/* Mic + cam: không ép height/align-items bằng CSS legacy (dễ lệch giữa trình duyệt).
+   Kích thước/shape được điều khiển trực tiếp bằng class ở component. */

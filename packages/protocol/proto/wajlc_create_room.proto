@@ -1,0 +1,310 @@
+syntax = "proto3";
+package wajlc;
+
+import "wajlc_gen_token.proto";
+import "buf/validate/validate.proto";
+import "wajlc_ingress.proto";
+import "wajlc_auth_room.proto";
+
+message CreateRoomReq {
+  string room_id = 1 [(buf.validate.field).cel = {
+    id: "room_id_format",
+    message: "room_id should only contain ASCII letters (a-z A-Z), digits (0-9) or -_",
+    expression: "this.matches('^[a-zA-Z0-9-_]+$')"
+  }];
+  optional uint32 empty_timeout = 2 [(buf.validate.field).uint32.gt = 0];
+  optional uint32 max_participants = 3 [(buf.validate.field).uint32.gt = 0];
+  RoomMetadata metadata = 4 [(buf.validate.field).required = true];
+}
+
+message RoomMetadata {
+  string room_title = 1 [(buf.validate.field).required = true];
+  optional string welcome_message = 2;
+  bool is_recording = 3 [(buf.validate.field).bool.const = false];
+  bool is_active_rtmp = 4 [(buf.validate.field).bool.const = false];
+  string parent_room_id = 5 [(buf.validate.field).cel = {
+    id: "parent_room_id_format",
+    message: "parent_room_id should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  bool is_breakout_room = 6 [(buf.validate.field).bool.const = false];
+  optional string webhook_url = 7 [(buf.validate.field).string.uri = true];
+  uint64 started_at = 8 [(buf.validate.field).uint64.const = 0];
+  optional string logout_url = 9 [(buf.validate.field).string.uri = true];
+  RoomCreateFeatures room_features = 10 [(buf.validate.field).required = true];
+  LockSettings default_lock_settings = 11;
+  CopyrightConf copyright_conf = 12;
+  // we'll use this as version control
+  optional string metadata_id = 13 [(buf.validate.field).cel = {
+    id: "metadata_id_format",
+    message: "metadata_id should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  map<string,string> extra_data = 14;
+}
+
+message RoomCreateFeatures {
+  bool allow_webcams = 1;
+  bool mute_on_start = 2;
+  bool allow_screen_share = 3;
+  bool allow_rtmp = 4;
+  bool allow_view_other_webcams = 5;
+  bool allow_view_other_users_list = 6;
+  bool admin_only_webcams = 7;
+  // deprecated use polls_features
+  optional bool allow_polls = 8 [deprecated = true];
+  optional uint64 room_duration = 9;
+  bool enable_analytics = 10;
+  optional bool allow_virtual_bg = 11;
+  optional bool allow_raise_hand = 12;
+  optional bool auto_gen_user_id = 13;
+  RecordingFeatures recording_features = 14;
+  ChatFeatures chat_features = 15;
+  SharedNotePadFeatures shared_note_pad_features = 16;
+  WhiteboardFeatures whiteboard_features = 17;
+  ExternalMediaPlayerFeatures external_media_player_features = 18;
+  WaitingRoomFeatures waiting_room_features = 19;
+  BreakoutRoomFeatures breakout_room_features = 20;
+  DisplayExternalLinkFeatures display_external_link_features = 21;
+  IngressFeatures ingress_features = 22;
+  // deprecated use insights_features
+  SpeechToTextTranslationFeatures speech_to_text_translation_features = 23 [deprecated = true];
+  EndToEndEncryptionFeatures end_to_end_encryption_features = 24;
+  PollsFeatures polls_features = 25;
+  InsightsFeatures insights_features = 26;
+  // next ID: 27
+}
+
+message ChatFeatures {
+  optional bool allow_chat = 1 [deprecated = true];
+  optional bool allow_file_upload = 2 [deprecated = true];
+  bool is_allow = 5;
+  bool is_allow_file_upload = 6;
+
+  repeated string allowed_file_types = 3;
+  optional uint64 max_file_size = 4;
+}
+
+message SharedNotePadFeatures {
+  optional bool allowed_shared_note_pad = 1 [deprecated = true];
+  bool is_allow = 8;
+
+  bool is_active = 2 [(buf.validate.field).bool.const = false];
+  bool visible = 3 [(buf.validate.field).bool.const = false];
+  string node_id = 4 [(buf.validate.field).cel = {
+    id: "node_id_format",
+    message: "node_id should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  string host = 5 [(buf.validate.field).cel = {
+    id: "host_format",
+    message: "host should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  string note_pad_id = 6 [(buf.validate.field).cel = {
+    id: "note_pad_id_format",
+    message: "note_pad_id should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  string read_only_pad_id = 7 [(buf.validate.field).cel = {
+    id: "read_only_pad_id_format",
+    message: "read_only_pad_id should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+}
+
+message WhiteboardFeatures {
+  optional bool allowed_whiteboard = 1 [deprecated = true];
+  bool is_allow = 9;
+
+  bool visible = 2 [(buf.validate.field).bool.const = false];
+  optional string preload_file = 3 [(buf.validate.field).string.uri = true];
+  string whiteboard_file_id = 4 [(buf.validate.field).cel = {
+    id: "whiteboard_file_id_format",
+    message: "whiteboard_file_id should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  string file_name = 5 [(buf.validate.field).cel = {
+    id: "file_name_format",
+    message: "file_name should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  string file_path = 6 [(buf.validate.field).cel = {
+    id: "file_path_format",
+    message: "file_path should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  uint32 total_pages = 7;
+  optional uint64 max_allowed_file_size = 8 [(buf.validate.field).uint64.const = 0];
+}
+
+message ExternalMediaPlayerFeatures {
+  optional bool allowed_external_media_player = 1 [deprecated = true];
+  bool is_allow = 5;
+
+  bool is_active = 2 [(buf.validate.field).bool.const = false];
+  optional string shared_by = 3 [(buf.validate.field).cel = {
+    id: "shared_by_format",
+    message: "shared_by should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  optional string url = 4 [(buf.validate.field).cel = {
+    id: "url_format",
+    message: "url should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+}
+
+message WaitingRoomFeatures {
+  bool   is_active = 1;
+  string waiting_room_msg = 2;
+}
+
+message BreakoutRoomFeatures {
+  bool is_allow = 1;
+  bool is_active = 2 [(buf.validate.field).bool.const = false];
+  uint32 allowed_number_rooms = 3;
+}
+
+message DisplayExternalLinkFeatures {
+  bool is_allow = 1;
+  bool is_active = 2 [(buf.validate.field).bool.const = false];
+  optional string link = 3;
+  optional string shared_by = 4;
+}
+
+message RecordingFeatures {
+  bool is_allow = 1;
+  bool is_allow_cloud = 2;
+  bool enable_auto_cloud_recording = 3;
+  bool is_allow_local = 4;
+  bool only_record_admin_webcams = 5;
+}
+
+message IngressFeatures {
+  bool is_allow = 1;
+  IngressInput input_type = 2;
+  string url = 3 [(buf.validate.field).cel = {
+    id: "url_format",
+    message: "url should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  string stream_key = 4 [(buf.validate.field).cel = {
+    id: "stream_key_format",
+    message: "stream_key should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+}
+
+// deprecated use insights_features
+message SpeechToTextTranslationFeatures {
+  bool is_allow = 1;
+  bool is_allow_translation = 2;
+  bool is_enabled = 3 [(buf.validate.field).bool.const = false];
+  bool is_enabled_translation = 4 [(buf.validate.field).bool.const = false];
+  int32 max_num_tran_langs_allow_selecting = 11;
+  repeated string allowed_speech_langs = 7 [(buf.validate.field).repeated.max_items = 0];
+  repeated string allowed_speech_users = 8 [(buf.validate.field).repeated.max_items = 0];
+  repeated string allowed_trans_langs = 9 [(buf.validate.field).repeated.max_items = 0];
+  optional string default_subtitle_lang = 10 [(buf.validate.field).cel = {
+    id: "default_subtitle_lang_format",
+    message: "default_subtitle_lang should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  // next ID: 12
+}
+
+message EndToEndEncryptionFeatures {
+  bool is_enabled = 1;
+  bool included_chat_messages = 2;
+  bool included_whiteboard = 3;
+  bool enabled_self_insert_encryption_key = 5;
+
+  // internal fields
+  optional string encryption_key = 4 [(buf.validate.field).cel = {
+    id: "encryption_key_format",
+    message: "encryption_key should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+}
+
+message PollsFeatures {
+  bool is_allow = 1;
+  bool is_active = 2 [(buf.validate.field).bool.const = false];
+}
+
+message InsightsFeatures {
+  bool is_allow = 1; // Allow/disallow all insights features for this room
+  optional InsightsTranscriptionFeatures transcription_features = 2;
+  optional InsightsChatTranslationFeatures chat_translation_features = 3;
+  optional InsightsAIFeatures ai_features = 4;
+}
+
+message InsightsTranscriptionFeatures {
+  bool is_allow = 1;
+  bool is_allow_translation = 2;
+  bool is_allow_speech_synthesis = 3;
+
+  // all internal usage fields
+  bool is_enabled = 4 [(buf.validate.field).bool.const = false];
+  repeated string allowed_spoken_langs = 5 [(buf.validate.field).repeated.max_items = 0];
+  repeated string allowed_speech_users = 6 [(buf.validate.field).repeated.max_items = 0];
+
+  bool is_enabled_translation = 7 [(buf.validate.field).bool.const = false];
+  int32 max_selected_trans_langs = 8 [(buf.validate.field).int32.const = 0];
+  repeated string allowed_trans_langs = 9 [(buf.validate.field).repeated.max_items = 0];
+  optional string default_subtitle_lang = 10 [(buf.validate.field).cel = {
+    id: "default_subtitle_lang_format",
+    message: "default_subtitle_lang should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+  bool is_enabled_speech_synthesis = 11 [(buf.validate.field).bool.const = false];
+}
+
+message InsightsChatTranslationFeatures {
+  bool is_allow = 1;
+
+  // all internal usage fields
+  bool is_enabled = 2 [(buf.validate.field).bool.const = false];
+  repeated string allowed_trans_langs = 3 [(buf.validate.field).repeated.max_items = 0];
+  int32 max_selected_trans_langs = 4 [(buf.validate.field).int32.const = 0];
+  optional string default_lang = 5 [(buf.validate.field).cel = {
+    id: "default_lang_format",
+    message: "default_lang should not contain any value",
+    expression: "this.matches('^$')"
+  }];
+}
+
+message InsightsAIFeatures {
+  bool is_allow = 1;
+  optional InsightsAITextChatFeatures ai_text_chat_features = 2;
+  optional InsightsAIMeetingSummarizationFeatures meeting_summarization_features = 3;
+}
+
+message InsightsAITextChatFeatures {
+  bool is_allow = 1;
+
+  // all internal usage fields
+  bool is_enabled = 2 [(buf.validate.field).bool.const = false];
+  bool is_allowed_everyone = 3 [(buf.validate.field).bool.const = false];
+  repeated string allowed_user_ids = 4 [(buf.validate.field).repeated.max_items = 0];
+}
+
+message InsightsAIMeetingSummarizationFeatures {
+  bool is_allow = 1;
+  string summarization_prompt = 2;
+
+  // all internal usage fields
+  bool is_enabled = 3 [(buf.validate.field).bool.const = false];
+}
+
+message CopyrightConf {
+  bool display = 1;
+  string text = 3;
+}
+
+message CreateRoomRes {
+  bool status = 1;
+  string msg = 2;
+  ActiveRoomInfo room_info = 3;
+}

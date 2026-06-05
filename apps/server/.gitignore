@@ -1,0 +1,11 @@
+node_modules
+
+/generated/prisma
+/libs/proto/src/generated
+# Proto generation dependencies
+proto-deps
+/firebase-admin-config.json
+
+# Configuration
+/config/config.yaml
+!/config/config.sample.yaml
