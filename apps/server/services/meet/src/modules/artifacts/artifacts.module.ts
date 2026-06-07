@@ -1,10 +1,5 @@
-/**
- * Artifacts Module
- */
-
 import { Module, forwardRef } from '@nestjs/common';
 import { ArtifactsService } from './artifacts.service';
-import { ArtifactsHandler } from '@server/meet/transport/nats/handlers/artifacts.handler';
 import { SharedModule } from '@server/shared';
 import { WebhookModule } from '@server/meet/infrastructure/webhook/webhook.module';
 
@@ -18,7 +13,7 @@ import { RedisModule } from '@server/meet/infrastructure/redis/redis.module';
     NatsModule,
     RedisModule,
   ],
-  controllers: [ArtifactsHandler],
+  controllers: [],
   providers: [ArtifactsService],
   exports: [ArtifactsService],
 })

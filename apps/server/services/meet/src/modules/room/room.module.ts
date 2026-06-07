@@ -27,11 +27,6 @@ import { WaitingRoomService } from '@server/meet/modules/waiting-room/waiting-ro
 import { RedisLockService } from '@server/meet/infrastructure/redis/redis-lock.service';
 import { RedisRoomService } from '@server/meet/infrastructure/redis/redis-room.service';
 
-// Handlers
-import { RoomHandler } from '@server/meet/transport/nats/handlers/room.handler';
-import { UserHandler } from '@server/meet/transport/nats/handlers/user.handler';
-import { WaitingRoomHandler } from '@server/meet/transport/nats/handlers/waiting-room.handler';
-
 @Module({
   imports: [
     SharedModule,
@@ -48,7 +43,7 @@ import { WaitingRoomHandler } from '@server/meet/transport/nats/handlers/waiting
     LiveKitModule,
     WajlcAuthModule,
   ],
-  controllers: [RoomHandler, UserHandler, WaitingRoomHandler],
+  controllers: [],
   providers: [
     // Room services
     RoomCreateService,

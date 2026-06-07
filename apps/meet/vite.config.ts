@@ -10,6 +10,7 @@ const BUILD_INTERVAL = 1500;
 
 export default defineConfig({
   root: join(__dirname, 'src'),
+  envDir: __dirname,
   base: '',
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.jsx'],

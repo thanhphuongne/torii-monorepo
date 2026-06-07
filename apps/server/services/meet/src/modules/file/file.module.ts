@@ -1,6 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { FileService } from './file.service';
-import { FileNatsController } from '@server/meet/transport/nats/handlers/file.nats.controller';
 import { SharedModule } from '@server/shared';
 import { NatsRoomService } from '@server/meet/infrastructure/nats/nats-room.service';
 import { NatsRoomEventsService } from '@server/meet/infrastructure/nats/nats-room-events.service';
@@ -29,7 +28,7 @@ import { WajlcAuthService } from '@server/meet/modules/auth/wajlc-auth.service';
     NatsRoomService,
     NatsRoomEventsService,
   ],
-  controllers: [FileNatsController],
+  controllers: [],
   exports: [FileService],
 })
 export class FileModule {}

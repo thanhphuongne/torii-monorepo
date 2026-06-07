@@ -44,11 +44,7 @@ RUN pnpm run build
 WORKDIR /app/apps/server
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate
-RUN npx nest build gateway
-RUN npx nest build identity
 RUN npx nest build meet
-RUN npx nest build academy
-RUN npx nest build agents
 
 # --- Runner Stage ---
 FROM node:20-slim AS runner

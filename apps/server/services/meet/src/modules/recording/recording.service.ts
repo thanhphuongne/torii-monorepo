@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, OnModuleInit } from '@nestjs/common';
 import { NatsRoomService } from '@server/meet/infrastructure/nats/nats-room.service';
 import { NatsService } from '@server/meet/infrastructure/nats/nats.service';
 import { RoomInfoService } from '@server/meet/modules/room/room-info.service';
@@ -8,6 +8,7 @@ import {
   RecordingTasks,
   CommonResponseSchema,
   RecorderToWajlc,
+  RecorderToWajlcSchema,
   AnalyticsEvents,
   AnalyticsEventType,
   AnalyticsDataMsgSchema,
@@ -24,7 +25,7 @@ import { RoomUserService } from '@server/meet/modules/room/room-user.service';
 import { AppConfigService } from '@server/shared';
 
 @Injectable()
-export class RecordingService {
+export class RecordingService implements OnModuleInit {
   private readonly logger = new Logger(RecordingService.name);
 
   constructor(
@@ -41,6 +42,41 @@ export class RecordingService {
     @Inject(forwardRef(() => RoomUserService))
     private readonly roomUserService: RoomUserService,
   ) {}
+
+  async onModuleInit() {
+    this.logger.log('Initializing RecordingService NATS subscriber for recorder.notify...');
+    const nc = this.natsService.getNatsConnection();
+    if (nc) {
+      nc.subscribe('recorder.notify', {
+        callback: async (err, msg) => {
+          if (err) {
+            this.logger.error(`Error in recorder.notify subscription: ${err.message}`);
+            return;
+          }
+          try {
+            const req = fromBinary(RecorderToWajlcSchema, msg.data);
+            await this.handleRecorderResp(req);
+            
+            const res = create(CommonResponseSchema, {
+              status: true,
+              msg: 'Notification processed',
+            });
+            msg.respond(toBinary(CommonResponseSchema, res));
+          } catch (error) {
+            this.logger.error(`Error processing recorder.notify: ${error.message}`);
+            const res = create(CommonResponseSchema, {
+              status: false,
+              msg: error.message,
+            });
+            msg.respond(toBinary(CommonResponseSchema, res));
+          }
+        }
+      });
+      this.logger.log('Subscribed to recorder.notify subject successfully');
+    } else {
+      this.logger.warn('NATS Connection is not ready. Skipping recorder.notify subscription.');
+    }
+  }
 
   /**
    * handleRecordingReq processes user requests for recording/RTMP

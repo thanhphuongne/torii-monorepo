@@ -6,7 +6,6 @@ import { RedisLockService } from '@server/meet/infrastructure/redis/redis-lock.s
 
 import { AnalyticsModule } from '@server/meet/modules/analytics/analytics.module';
 import { NatsModule } from '@server/meet/services/nats.module';
-import { PollsHandler } from '@server/meet/transport/nats/handlers/polls.handler';
 import { LiveKitModule } from '@server/meet/infrastructure/livekit/livekit.module';
 import { WajlcAuthModule } from '@server/meet/modules/auth/wajlc-auth.module';
 
@@ -18,7 +17,7 @@ import { WajlcAuthModule } from '@server/meet/modules/auth/wajlc-auth.module';
     LiveKitModule,
     WajlcAuthModule,
   ],
-  controllers: [PollsHandler],
+  controllers: [],
   providers: [PollsService, RedisPollService, RedisLockService],
   exports: [PollsService],
 })
